@@ -14,14 +14,14 @@ function layout(title, body, { script } = {}) {
 <title>DROP :: ${e(title)}</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preload" href="/vendor/vt323-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/style.css?v=${VERSION}">
 </head>
 <body>
 <main class="shell">
 ${body}
 </main>
-<script type="module" src="/rain.js"></script>
-${script ? `<script type="module" src="${script}"></script>` : ''}
+<script type="module" src="/rain.js?v=${VERSION}"></script>
+${script ? `<script type="module" src="${script}?v=${VERSION}"></script>` : ''}
 </body>
 </html>`;
 }

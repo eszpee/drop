@@ -251,6 +251,8 @@ function serveStatic(res, pathname) {
   const [file, type] = staticFiles[pathname];
   const body = fs.readFileSync(path.join(root, file));
   // Vendor files change only with a new image; pages and app code revalidate.
+  // Cloudflare overrides this with its own browser TTL, so the pages also put the
+  // version in every app asset URL (?v=), and a deploy is never served stale.
   const cache = pathname.startsWith('/vendor/') ? 'public, max-age=86400' : 'no-cache';
   res.writeHead(200, { ...securityHeaders, 'content-type': type, 'cache-control': cache });
   res.end(body);
