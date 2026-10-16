@@ -13,5 +13,7 @@
     "uppy": "^6.0.4"
   },
   "type": "module",
-  "private": true
+  "private": true,
+  "license": "MIT",
+  "author": "Péter Szász"
 }

@@ -67,10 +67,18 @@ function fileList(b, base) {
   <ul class="files">${rows || '<li class="muted">No finished files.</li>'}</ul>`;
 }
 
-const dayChoices = () =>
-  config.shareDays
-    .map((d, i) => `<option value="${d}"${d === 7 || (i === 0 && !config.shareDays.includes(7)) ? ' selected' : ''}>${plural(d, 'DAY')}</option>`)
+// Expiry choices as a row of buttons (radios underneath, so the form works
+// without JavaScript). The middle one is preselected.
+const dayChoices = () => {
+  const pick = config.shareDays[Math.floor(config.shareDays.length / 2)];
+  const opts = config.shareDays
+    .map(
+      (d) =>
+        `<label><input type="radio" name="days" value="${d}"${d === pick ? ' checked' : ''}><span>${d} day${d === 1 ? '' : 's'}</span></label>`,
+    )
     .join('');
+  return `<div class="days" role="radiogroup" aria-label="Link expires after">${opts}</div>`;
+};
 
 function shareSection(b) {
   const shares = (b.shares ?? []).slice().reverse();
@@ -95,13 +103,13 @@ function shareSection(b) {
     })
     .join('');
   const note = b.home
-    ? 'Download-only links. Uploaded from home, so the files are deleted once the links run out.'
+    ? 'Download-only links. Uploaded from home, so the files are deleted once the links run out, or a day after upload if there never was one.'
     : 'Download-only links: no delete, no sender details. Revoke one any time.';
   return `<section class="term" id="share" data-label="SHARE">
   <p class="muted small">${note}</p>
   <ul class="shares">${rows}</ul>
   <form class="share-new" method="post" action="/b/${b.token}/share">
-    <select name="days" aria-label="Link expires after">${dayChoices()}</select>
+    ${dayChoices()}
     <button class="btn" type="submit">New link</button>
   </form>
 </section>`;
@@ -112,7 +120,7 @@ export function sharePage(b, s) {
   return layout(
     'files for you',
     `<header class="hero">
-  <p class="banner">PETERSZASZ.COM // DROP ${VERSION} // INCOMING TRANSMISSION</p>
+  <p class="banner">DROP ${VERSION} // INCOMING TRANSMISSION</p>
   <h1><span class="prompt">${plural(b.files.length, 'FILE')} FOR YOU</span><span class="cursor" aria-hidden="true"></span></h1>
   <p class="muted">${humanSize(total)} total · link works until ${e(fmtDate(s.expiresAt))}</p>
 </header>
@@ -140,7 +148,7 @@ export function ownerPage(b) {
   return layout(
     'incoming',
     `<header class="hero">
-  <p class="banner">PETERSZASZ.COM // DROP ${VERSION} // RECEIVED ${e(fmtDate(b.createdAt))}</p>
+  <p class="banner">DROP ${VERSION} // RECEIVED ${e(fmtDate(b.createdAt))}</p>
   <h1><span class="prompt">INCOMING: ${plural(b.files.length, 'FILE')}</span><span class="cursor" aria-hidden="true"></span></h1>
   <p class="muted">${humanSize(total)} total · from ${e(b.ip ?? 'unknown')}${b.home ? ' (home)' : ''}</p>
 </header>

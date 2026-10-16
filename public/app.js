@@ -120,7 +120,9 @@ function start(cfg) {
     const batchId = result.successful[0].meta.batchId;
     // Even if this call is lost, the server announces the batch on its own once
     // it has been quiet for a while.
-    await fetch(`/api/batches/${batchId}/complete`, { method: 'POST' }).catch(() => {});
+    const done = await fetch(`/api/batches/${batchId}/complete`, { method: 'POST' })
+      .then((r) => r.json())
+      .catch(() => ({}));
     storage.set(BATCH_KEY, null);
     const n = result.successful.length;
     $('done-text').textContent = HOME
@@ -128,7 +130,7 @@ function start(cfg) {
       : `${n} file${n === 1 ? '' : 's'} received intact. Nothing else to do. You can close this window.`;
     $('uploader').hidden = true;
     $('done').hidden = false;
-    if (HOME) showShare(batchId);
+    if (HOME) showShare(batchId, done.manage);
   });
 
   $('again').addEventListener('click', () => {
@@ -149,12 +151,15 @@ function start(cfg) {
 
 let shareBatch = null;
 
-function showShare(batchId) {
+function showShare(batchId, manage) {
   shareBatch = batchId;
   $('share-new').hidden = false;
   $('share-out').hidden = true;
+  $('share-exp').textContent = '';
   $('share-make').disabled = false;
   $('share-make').textContent = 'Create link';
+  $('share-manage').hidden = !manage;
+  if (manage) $('share-manage').href = manage;
   $('share').hidden = false;
 }
 
@@ -166,13 +171,12 @@ if (HOME) {
     const res = await fetch(`/api/batches/${shareBatch}/share`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ days: Number($('share-days').value) }),
+      body: JSON.stringify({ days: Number(document.querySelector('#share input[name=days]:checked')?.value) }),
     }).catch(() => null);
     const out = res && (await res.json().catch(() => ({})));
     if (!res?.ok || !out.url) {
       btn.disabled = false;
       btn.textContent = 'Create link';
-      $('share-exp').textContent = '';
       alertLine(out?.error || 'Could not make a link. Try again.');
       return;
     }
@@ -180,7 +184,7 @@ if (HOME) {
     const when = new Date(out.expiresAt).toLocaleString('en-GB', {
       day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
     }).toUpperCase();
-    $('share-exp').textContent = `Works until ${when}. Revoke it from the link in your email.`;
+    $('share-exp').textContent = `Works until ${when}.`;
     $('share-new').hidden = true;
     $('share-out').hidden = false;
     $('share-send').hidden = !navigator.share;
@@ -206,6 +210,4 @@ if (HOME) {
 
 function alertLine(text) {
   $('share-exp').textContent = `ERROR: ${text}`;
-  $('share-out').hidden = true;
-  $('share-new').hidden = false;
 }

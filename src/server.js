@@ -153,6 +153,8 @@ const notifying = new Set();
 // Sends the email for a batch if one is due: there are files the last email did not
 // cover, and the uploader either said they are done or has gone quiet.
 async function maybeNotify(batch, now = Date.now()) {
+  // The owner uploaded it themselves and saw the result on screen.
+  if (batch.home) return;
   if (batch.deletedAt || batch.files.length <= batch.notifiedFiles || notifying.has(batch.id)) return;
   const inFlight = uploads.inFlight(batch.id);
   const lastActivity = Math.max(Date.parse(batch.updatedAt), ...inFlight.map((id) => uploads.lastWrite(id)));
@@ -183,6 +185,13 @@ async function sweep() {
     }
     if (sharesExpired(b, now)) {
       console.log(`batch ${b.id}: share links expired`);
+      deleteBatch(b);
+      continue;
+    }
+    // A home upload exists to be shared, and sends no email; one nobody made a link
+    // for within a day would otherwise sit on the disk with nobody knowing.
+    if (b.home && !(b.shares ?? []).length && !uploads.inFlight(b.id).length && now - Date.parse(b.updatedAt) > 86_400_000) {
+      console.log(`batch ${b.id}: home upload never shared`);
       deleteBatch(b);
       continue;
     }
@@ -400,7 +409,9 @@ async function route(req, res) {
       batches.update(b, { completedAt: new Date().toISOString() });
       maybeNotify(b);
     }
-    return json(res, 200, { ok: true, files: b.files.length });
+    // Home uploads send no email, so the owner page link is handed over here.
+    const manage = b.home && (await isHome(req)) ? `/b/${b.token}` : undefined;
+    return json(res, 200, { ok: true, files: b.files.length, manage });
   }
 
   // A share link for a batch the owner just uploaded from home. Both halves are

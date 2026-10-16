@@ -19,8 +19,15 @@ A visitor coming from the server's own public address is taken to be the owner a
 home (or on a VPN that exits there). For them the banner reads `HOME MODE`, and when
 an upload finishes the page offers a share link right away, with Copy and the
 system share sheet, so sending something to someone needs no email round trip.
-Files uploaded in home mode are deleted once their share links run out (links
-revoked by hand don't count; with all of them revoked, the files stay).
+Home-mode uploads send no email; the finish screen links to their owner page
+instead. Their files are deleted once their share links run out (links revoked by
+hand don't count; with all of them revoked, the files stay), or a day after upload
+if no link was ever made.
+
+Expiry needs no extra machinery: a share link is checked against its expiry on
+every request, so it stops working on the second. The files go on the app's own
+5-minute cleanup pass, the same one that sends late emails and removes abandoned
+partial uploads.
 
 The server learns its public address by asking `HOME_LOOKUP_URL` (default
 `https://1.1.1.1/cdn-cgi/trace`, which answers with an `ip=` line) and compares it
@@ -88,3 +95,8 @@ DATA_DIR/
   uploads/<id>.json     tus metadata: size, filename, batch
   batches/<batch>.json  one per send: owner token, file list, share links, notification state
 ```
+
+## License
+
+[MIT](LICENSE): free for anyone to use, modify and redistribute, as long as the
+copyright notice stays with every copy.
