@@ -200,6 +200,9 @@ a { color: var(--hi); }
 
 /* ---------------------------------------------------------------- sharing */
 
+/* Flex and block rules below would otherwise beat the hidden attribute. */
+[hidden] { display: none !important; }
+
 .home-flag {
   color: var(--bg);
   background: var(--fg);
