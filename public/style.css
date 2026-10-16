@@ -241,6 +241,8 @@ a { color: var(--hi); }
 .share-box { margin: 22px auto 0; padding-top: 18px; border-top: 1px dashed var(--dim); max-width: 560px; }
 .term.center #share-new, .term.center .share-actions { justify-content: center; }
 .share-box #share-exp { margin-top: 8px; }
+.share-box #share-new { flex-direction: column; gap: 10px; }
+.share-box #share-make { margin-top: 6px; }
 .share-box a { color: var(--fg); }
 .shares { list-style: none; margin: 0; padding: 0; }
 .share { padding: 6px 0 12px; border-bottom: 1px dashed var(--dim); }
