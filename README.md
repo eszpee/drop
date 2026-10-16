@@ -13,6 +13,32 @@ owner can get them back out.
 - The owner can also make **share links**: download-only, no delete, no sender
   details, expiring after 1, 7 or 30 days, revocable from the owner page.
 
+## Screenshots
+
+The data below is made up: names, links and addresses are examples.
+
+**The upload page**, as anyone sees it, with three files queued:
+
+![Upload page with three files queued](docs/screenshots/upload.png)
+
+**Home mode, after an upload:** one box with the result and a share link ready to
+copy or send.
+
+![Finished upload in home mode with a share link](docs/screenshots/home-share.png)
+
+**What the recipient gets:** the files and nothing else.
+
+![Share page with two files to download](docs/screenshots/share.png)
+
+**The owner page:** downloads, share links with their state, and delete.
+
+![Owner page with files, a share link and the delete box](docs/screenshots/owner.png)
+
+**The admin page** (home mode only): disk use, 90-day statistics, inbox, outbox
+and history.
+
+![Admin page with disk meter, statistics, inbox, outbox and history](docs/screenshots/admin.png)
+
 ## Home mode
 
 A visitor coming from the server's own public address is taken to be the owner at
