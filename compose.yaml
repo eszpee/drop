@@ -17,8 +17,8 @@ services:
       - OWNER_NAME=${OWNER_NAME:-me}
       - APPRISE_URL=${APPRISE_URL:-}
       - APPRISE_TAG=${APPRISE_TAG:-email}
-      - MAX_FILE_SIZE=${MAX_FILE_SIZE:-10G}
-      - MAX_TOTAL=${MAX_TOTAL:-300G}
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE:-50G}
+      - MAX_TOTAL=${MAX_TOTAL:-500G}
       - MIN_FREE=${MIN_FREE:-300G}
     volumes:
       # Absolute host path, writable by uid 1000 (the image's `node` user), with a

@@ -17,8 +17,8 @@ Because the page is open to anyone, the app protects the disk it writes to:
 
 | Setting | Default | Meaning |
 |---|---|---|
-| `MAX_FILE_SIZE` | `10G` | Largest single file |
-| `MAX_TOTAL` | `300G` | Everything stored, including uploads in progress |
+| `MAX_FILE_SIZE` | `50G` | Largest single file |
+| `MAX_TOTAL` | `500G` | Everything stored, including uploads in progress |
 | `MIN_FREE` | `300G` | Refuse any upload that would leave less than this free on the volume |
 
 Space is reserved at the moment an upload is *created*, from its declared length,

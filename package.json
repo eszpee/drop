@@ -6,6 +6,7 @@
     "start": "node src/server.js"
   },
   "dependencies": {
+    "@fontsource/vt323": "^5.3.0",
     "@tus/file-store": "^2.1.1",
     "@tus/server": "^2.4.5",
     "archiver": "^8.0.0",

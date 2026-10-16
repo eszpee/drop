@@ -210,7 +210,10 @@ const staticFiles = {
   '/app.js': ['public/app.js', 'text/javascript; charset=utf-8'],
   '/style.css': ['public/style.css', 'text/css; charset=utf-8'],
   '/owner.js': ['public/owner.js', 'text/javascript; charset=utf-8'],
+  '/rain.js': ['public/rain.js', 'text/javascript; charset=utf-8'],
   '/favicon.svg': ['public/favicon.svg', 'image/svg+xml'],
+  '/vendor/vt323-latin.woff2': ['node_modules/@fontsource/vt323/files/vt323-latin-400-normal.woff2', 'font/woff2'],
+  '/vendor/vt323-latin-ext.woff2': ['node_modules/@fontsource/vt323/files/vt323-latin-ext-400-normal.woff2', 'font/woff2'],
   '/vendor/uppy.min.mjs': ['node_modules/uppy/dist/uppy.min.mjs', 'text/javascript; charset=utf-8'],
   '/vendor/uppy.min.css': ['node_modules/uppy/dist/uppy.min.css', 'text/css; charset=utf-8'],
 };

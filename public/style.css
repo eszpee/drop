@@ -1,169 +1,378 @@
-:root {
-  --bg: #f6f7fb;
-  --bg-2: #eef0f8;
-  --card: #ffffff;
-  --text: #15171c;
-  --muted: #646a78;
-  --line: #e3e6ef;
-  --accent: #4f5bd5;
-  --accent-ink: #ffffff;
-  --ok: #1f9d63;
-  --danger: #d43b3b;
-  --shadow: 0 1px 2px rgb(20 24 40 / 0.04), 0 8px 28px rgb(20 24 40 / 0.07);
-  color-scheme: light dark;
+/* Green-phosphor terminal, circa 1999. One hue, hard edges, pixel type.
+   No gradients, no rounded cards, no soft colored glows: the only glow is the
+   tight phosphor bloom on the text itself. */
+
+@font-face {
+  font-family: 'VT323';
+  src: url('/vendor/vt323-latin.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308,
+    U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'VT323';
+  src: url('/vendor/vt323-latin-ext.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0f1116;
-    --bg-2: #151925;
-    --card: #181b23;
-    --text: #eceef3;
-    --muted: #9399a8;
-    --line: #2a2f3c;
-    --accent: #7c86ff;
-    --accent-ink: #0f1116;
-    --ok: #37c88a;
-    --danger: #ff6464;
-    --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 28px rgb(0 0 0 / 0.35);
-  }
+:root {
+  --bg: #000;
+  --fg: #33ff66;
+  --hi: #ccffcc;
+  --dim: #1f9940;
+  --faint: #0b3d1a;
+  --glow: 0 0 2px rgb(51 255 102 / 0.8), 0 0 6px rgb(51 255 102 / 0.35);
+  --font: 'VT323', 'Courier New', ui-monospace, monospace;
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
 
+html { background: var(--bg); }
+
 body {
   margin: 0;
   min-height: 100vh;
-  background: radial-gradient(1200px 600px at 50% -10%, var(--bg-2), var(--bg));
-  color: var(--text);
-  font: 16px/1.5 ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-  -webkit-font-smoothing: antialiased;
+  background: var(--bg);
+  color: var(--fg);
+  font: 22px/1.25 var(--font);
+  text-shadow: var(--glow);
+  -webkit-font-smoothing: none;
+  font-variant-ligatures: none;
 }
+
+/* CRT scanlines over everything. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9000;
+  background: repeating-linear-gradient(to bottom, rgb(0 0 0 / 0) 0 2px, rgb(0 0 0 / 0.28) 2px 3px);
+}
+
+.rain {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.22;
+  pointer-events: none;
+}
+
+::selection { background: var(--fg); color: var(--bg); text-shadow: none; }
+
+a { color: var(--hi); }
 
 .shell {
-  max-width: 720px;
+  position: relative;
+  z-index: 1;
+  max-width: 760px;
   margin: 0 auto;
-  padding: 56px 16px 40px;
+  padding: 40px 16px 40px;
 }
 
-.hero { text-align: center; margin-bottom: 28px; }
-.hero h1 { font-size: clamp(1.6rem, 4vw, 2.2rem); letter-spacing: -0.02em; margin: 12px 0 8px; }
-.hero p { max-width: 520px; margin: 0 auto; }
+/* ---------------------------------------------------------------- header */
 
-h1 { line-height: 1.2; }
-h2 { font-size: 1.1rem; margin: 0 0 4px; }
-
-.eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.75rem; color: var(--muted); margin: 0; }
-.muted { color: var(--muted); }
-.small { font-size: 0.875rem; }
-.foot { text-align: center; margin-top: 18px; }
-
-.mark {
-  display: inline-grid;
-  place-items: center;
-  width: 52px;
-  height: 52px;
-  border-radius: 16px;
-  background: var(--accent);
-  color: var(--accent-ink);
-  font-size: 26px;
-  font-weight: 700;
-  box-shadow: var(--shadow);
+.hero { margin-bottom: 22px; }
+.banner {
+  margin: 0 0 14px;
+  color: var(--dim);
+  font-size: 18px;
+  letter-spacing: 0.08em;
 }
-.mark.ok { background: var(--ok); }
-
-.card {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  box-shadow: var(--shadow);
-  padding: 20px;
-  margin-bottom: 16px;
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(34px, 7vw, 52px);
+  font-weight: 400;
+  line-height: 1.05;
+  color: var(--hi);
+  text-transform: uppercase;
 }
-.card.center { text-align: center; padding: 40px 24px; }
-.card.center h1 { margin: 14px 0 6px; }
-
-.uploader .uppy-Dashboard-inner {
-  border-radius: 18px;
-  border: 1px solid var(--line);
-  box-shadow: var(--shadow);
-  overflow: hidden;
+.prompt::before { content: '> '; color: var(--fg); }
+.cursor {
+  display: inline-block;
+  width: 0.55em;
+  height: 0.9em;
+  margin-left: 0.08em;
+  background: var(--fg);
+  box-shadow: var(--glow);
+  vertical-align: -0.05em;
+  animation: blink 1.06s steps(1) infinite;
 }
-.uploader .uppy-Dashboard-inner,
-.uploader .uppy-Dashboard-AddFiles { background: var(--card); }
-.uploader .uppy-Dashboard-AddFiles { border-color: var(--line); border-radius: 14px; }
-.uploader .uppy-Dashboard-browse { color: var(--accent); }
-.uploader .uppy-StatusBar-actionBtn--upload { background-color: var(--accent); color: var(--accent-ink); border-radius: 10px; }
+@keyframes blink { 50% { opacity: 0; } }
+.hero p { margin: 0; max-width: 620px; }
 
-/* While a file is dragged over the page, show the whole page as the target. */
-body.uppy-is-drag-over::after {
-  content: 'Drop to add';
-  position: fixed;
-  inset: 12px;
-  display: grid;
-  place-items: center;
-  border: 2px dashed var(--accent);
-  border-radius: 22px;
-  background: color-mix(in srgb, var(--bg) 80%, transparent);
-  color: var(--accent);
-  font-size: 1.5rem;
-  font-weight: 600;
-  pointer-events: none;
-  z-index: 10000;
+.muted { color: var(--dim); }
+.small { font-size: 18px; }
+.foot { margin-top: 14px; color: var(--dim); font-size: 18px; }
+.foot::before { content: '// '; }
+
+/* ---------------------------------------------------------------- terminal box */
+
+.term {
+  position: relative;
+  border: 2px solid var(--fg);
+  background: var(--bg);
+  padding: 22px 20px 20px;
+  margin: 0 0 22px;
+  box-shadow: var(--glow);
 }
+.term[data-label]::before {
+  content: '[ ' attr(data-label) ' ]';
+  position: absolute;
+  top: -0.7em;
+  left: 14px;
+  padding: 0 6px;
+  background: var(--bg);
+  color: var(--fg);
+  line-height: 1.2;
+}
+.term.center { text-align: center; padding: 34px 20px; }
+.term h1, .term h2 {
+  margin: 0 0 8px;
+  font-weight: 400;
+  color: var(--hi);
+  text-transform: uppercase;
+}
+.term h1 { font-size: 40px; }
+.term h2 { font-size: 28px; }
+.term p { margin: 0; }
+
+/* ---------------------------------------------------------------- buttons */
 
 .btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 16px;
-  border-radius: 11px;
-  border: 1px solid transparent;
+  display: inline-block;
+  padding: 4px 14px;
+  border: 2px solid var(--fg);
+  border-radius: 0;
+  background: var(--bg);
+  color: var(--fg);
   font: inherit;
-  font-weight: 600;
   text-decoration: none;
+  text-transform: uppercase;
+  text-shadow: var(--glow);
   cursor: pointer;
-  transition: transform 0.06s ease, background 0.15s ease, box-shadow 0.15s ease;
   white-space: nowrap;
 }
-.btn:active { transform: translateY(1px); }
-.btn:disabled { opacity: 0.6; cursor: default; }
-.btn.primary { background: var(--accent); color: var(--accent-ink); }
-.btn.ghost { background: transparent; color: var(--accent); border-color: var(--line); }
-.btn.ghost:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
-.btn.danger { background: transparent; color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, var(--line)); }
-.btn.danger.armed, .delete.ready .btn.danger { background: var(--danger); color: #fff; border-color: var(--danger); }
-.btn.wide { width: 100%; margin-bottom: 12px; }
-#again { margin-top: 18px; }
+.btn::before { content: '[ '; }
+.btn::after { content: ' ]'; }
+.btn:hover, .btn:focus-visible, .btn.primary {
+  background: var(--fg);
+  color: var(--bg);
+  text-shadow: none;
+  outline: none;
+}
+.btn.primary:hover, .btn.primary:focus-visible { background: var(--hi); border-color: var(--hi); }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.btn.wide { display: block; width: 100%; text-align: center; margin-bottom: 14px; }
+.btn.armed { animation: blink 0.5s steps(1) infinite; background: var(--fg); color: var(--bg); text-shadow: none; }
+#again { margin-top: 20px; }
+
+/* ---------------------------------------------------------------- owner page */
 
 .files { list-style: none; margin: 0; padding: 0; }
 .file {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 0;
-  border-top: 1px solid var(--line);
+  gap: 14px;
+  padding: 10px 0;
+  border-top: 1px dashed var(--dim);
 }
 .file:first-child { border-top: 0; }
 .file-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.file-name { font-weight: 600; overflow-wrap: anywhere; }
-.file-size { color: var(--muted); font-size: 0.875rem; }
+.file-name { color: var(--hi); overflow-wrap: anywhere; }
+.file-size { color: var(--dim); font-size: 18px; }
 
-.delete {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+.delete { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.delete.ready { border-style: double; border-width: 4px; }
+.delete.ready h2::after { content: ''; display: inline-block; width: 0.5em; height: 0.85em; margin-left: 0.15em; background: var(--fg); animation: blink 1.06s steps(1) infinite; vertical-align: -0.05em; }
+
+.ascii {
+  margin: 0 0 10px;
+  font: inherit;
+  line-height: 1;
+  color: var(--fg);
+  white-space: pre;
 }
-.delete p { margin: 0; }
-.delete.ready { border-color: color-mix(in srgb, var(--danger) 45%, var(--line)); }
 
-@media (max-width: 520px) {
-  .shell { padding-top: 32px; }
-  /* Uppy sets the height inline; an empty 420px box is mostly blank on a phone. */
+/* ---------------------------------------------------------------- Uppy, re-skinned
+   Uppy ships a light/dark product UI; everything below forces it onto the
+   terminal: black, green, square, monospace. */
+
+.uploader { position: relative; }
+.uploader::before {
+  content: '[ UPLINK ]';
+  position: absolute;
+  top: -0.7em;
+  left: 14px;
+  z-index: 2;
+  padding: 0 6px;
+  background: var(--bg);
+  line-height: 1.2;
+}
+.uploader .uppy-Root,
+.uploader .uppy-Root * {
+  font-family: var(--font) !important;
+  font-variant-ligatures: none !important;
+  border-radius: 0 !important;
+}
+.uploader .uppy-Dashboard-inner {
+  background: var(--bg) !important;
+  border: 2px solid var(--fg) !important;
+  box-shadow: var(--glow);
+  color: var(--fg);
+}
+.uploader .uppy-Dashboard-innerWrap,
+.uploader .uppy-Dashboard-files,
+.uploader .uppy-Dashboard-AddFiles,
+.uploader .uppy-DashboardContent-bar,
+.uploader .uppy-StatusBar,
+.uploader .uppy-StatusBar-actions,
+.uploader .uppy-DashboardContent-panel,
+.uploader .uppy-Dashboard-Item,
+.uploader .uppy-Dashboard-Item-previewInnerWrap,
+.uploader .uppy-Dashboard-serviceMsg,
+.uploader .uppy-Dashboard-dropFilesHereHint {
+  background: var(--bg) !important;
+  color: var(--fg) !important;
+}
+.uploader .uppy-Dashboard-AddFiles {
+  border: 1px dashed var(--dim) !important;
+  margin: 10px !important;
+  height: calc(100% - 20px) !important;
+}
+.uploader .uppy-Dashboard-AddFiles-title {
+  font-size: 26px !important;
+  color: var(--fg) !important;
+  max-width: 520px;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+.uploader .uppy-Dashboard-browse,
+.uploader .uppy-DashboardContent-addMore,
+.uploader .uppy-DashboardContent-back {
+  color: var(--hi) !important;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.uploader .uppy-Dashboard-browse:hover { background: var(--fg); color: var(--bg) !important; text-decoration: none; }
+.uploader .uppy-DashboardContent-bar,
+.uploader .uppy-StatusBar { border-color: var(--fg) !important; }
+.uploader .uppy-DashboardContent-bar { border-bottom: 1px solid var(--fg) !important; }
+.uploader .uppy-DashboardContent-title,
+.uploader .uppy-Dashboard-Item-name,
+.uploader .uppy-StatusBar-statusPrimary {
+  color: var(--hi) !important;
+  font-size: 20px !important;
+}
+.uploader .uppy-Dashboard-Item-status,
+.uploader .uppy-StatusBar-statusSecondary,
+.uploader .uppy-Dashboard-note,
+.uploader .uppy-DashboardContent-title + * {
+  color: var(--dim) !important;
+  font-size: 17px !important;
+}
+.uploader .uppy-Dashboard-Item-previewInnerWrap { border: 1px solid var(--dim); }
+.uploader .uppy-Dashboard-Item-preview img {
+  filter: grayscale(1) sepia(1) hue-rotate(70deg) saturate(4) brightness(0.9);
+}
+/* File-type icons: Uppy draws a pale paper tile with a colored glyph. */
+.uploader .uppy-Dashboard-Item-previewIconBg { display: none; }
+.uploader .uppy-Dashboard-Item-previewIcon { color: var(--fg) !important; transform: translate(-50%, -50%) scale(1.6) !important; }
+.uploader .uppy-Dashboard-Item-previewIcon path { fill: var(--fg) !important; }
+
+/* Uppy's focus ring is a pale blue halo; ours is an inverted block. */
+.uploader .uppy-Root :focus,
+.uploader .uppy-Root :focus-visible,
+.uploader .uppy-c-btn:focus { box-shadow: none !important; outline: 2px dashed var(--hi) !important; outline-offset: 2px; }
+
+/* Pause / cancel: Uppy draws them as gray discs; make them green. */
+.uploader .uppy-StatusBar-actionCircleBtn { opacity: 1 !important; }
+.uploader .uppy-StatusBar-actionCircleBtn svg circle,
+.uploader .uppy-StatusBar-actionCircleBtn svg g > circle { fill: var(--fg) !important; }
+.uploader .uppy-StatusBar-actionCircleBtn svg path { fill: var(--bg) !important; }
+
+/* Remove-file badge: green disc, black cross. */
+.uploader .uppy-Dashboard-Item-action--remove { background: transparent !important; }
+.uploader .uppy-Dashboard-Item-action--remove svg path:first-child { fill: var(--fg) !important; }
+.uploader .uppy-Dashboard-Item-action--remove svg path:last-child { fill: var(--bg) !important; }
+
+/* Progress: a solid phosphor bar on a dim track. */
+.uploader .uppy-StatusBar { height: 44px !important; }
+.uploader .uppy-StatusBar::before { background: var(--faint) !important; height: 4px !important; }
+.uploader .uppy-StatusBar-progress { background: var(--fg) !important; height: 4px !important; box-shadow: var(--glow); }
+.uploader .uppy-StatusBar.is-complete .uppy-StatusBar-progress { background: var(--hi) !important; }
+.uploader .uppy-StatusBar-statusIndicator,
+.uploader .uppy-StatusBar svg,
+.uploader .uppy-Dashboard-Item-action svg,
+.uploader .uppy-Dashboard-Item-progressIndicator svg,
+.uploader .UppyIcon { color: var(--fg) !important; fill: var(--fg) !important; }
+.uploader .uppy-Dashboard-Item-progressIndicator circle { stroke: var(--fg) !important; }
+
+/* Buttons inside Uppy look like ours. */
+.uploader .uppy-StatusBar-actionBtn--upload,
+.uploader .uppy-StatusBar-actionBtn--retry,
+.uploader .uppy-StatusBar-actionBtn--done {
+  background: var(--fg) !important;
+  color: var(--bg) !important;
+  border: 2px solid var(--fg) !important;
+  text-shadow: none !important;
+  font-size: 22px !important;
+  text-transform: uppercase;
+  padding: 2px 16px !important;
+}
+.uploader .uppy-StatusBar-actionBtn--upload:hover { background: var(--hi) !important; border-color: var(--hi) !important; }
+.uploader .uppy-StatusBar-actionBtn--upload::before { content: '[ '; }
+.uploader .uppy-StatusBar-actionBtn--upload::after { content: ' ]'; }
+.uploader .uppy-DashboardContent-back,
+.uploader .uppy-StatusBar-actionCircleBtn,
+.uploader .uppy-Dashboard-Item-action--remove { color: var(--fg) !important; }
+
+/* Notices (errors, "session restored") read as inverted status lines. */
+.uploader .uppy-Informer p,
+.uploader .uppy-Dashboard-serviceMsg {
+  background: var(--fg) !important;
+  color: var(--bg) !important;
+  text-shadow: none !important;
+  border: 0 !important;
+}
+.uploader .uppy-Dashboard-serviceMsg * { color: var(--bg) !important; fill: var(--bg) !important; }
+
+/* Drag-over: the whole screen becomes the target. */
+.uploader .uppy-Dashboard-dropFilesHereHint {
+  border: 2px dashed var(--fg) !important;
+  color: var(--hi) !important;
+  font-size: 30px !important;
+  background-image: none !important;
+  padding-top: 0 !important;
+  text-transform: uppercase;
+}
+body.uppy-is-drag-over::before {
+  content: '>> RELEASE TO TRANSMIT <<';
+  position: fixed;
+  inset: 12px;
+  z-index: 8000;
+  display: grid;
+  place-items: center;
+  border: 2px dashed var(--fg);
+  background: rgb(0 0 0 / 0.85);
+  color: var(--hi);
+  font-size: 34px;
+  pointer-events: none;
+}
+
+.uploader .uppy-Dashboard-files { scrollbar-color: var(--fg) var(--bg); }
+
+@media (max-width: 560px) {
+  body { font-size: 20px; }
+  .shell { padding-top: 24px; }
   .uploader .uppy-Dashboard-inner { height: 320px !important; }
-  .delete { flex-direction: column; align-items: stretch; text-align: left; }
+  .delete { flex-direction: column; align-items: stretch; }
   .file { flex-wrap: wrap; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cursor, .btn.armed, .delete.ready h2::after { animation: none; }
 }

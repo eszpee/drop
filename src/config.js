@@ -28,9 +28,9 @@ export const config = {
   ownerName: process.env.OWNER_NAME || 'me',
   appriseUrl: process.env.APPRISE_URL || '',
   appriseTag: process.env.APPRISE_TAG || 'email',
-  maxFileSize: bytes('MAX_FILE_SIZE', 10 * GB),
+  maxFileSize: bytes('MAX_FILE_SIZE', 50 * GB),
   // Upper bound for everything stored here, finished or in flight.
-  maxTotal: bytes('MAX_TOTAL', 300 * GB),
+  maxTotal: bytes('MAX_TOTAL', 500 * GB),
   // Uploads are refused if accepting one would leave less than this free on the volume.
   minFree: bytes('MIN_FREE', 300 * GB),
   maxFilesPerBatch: Number(process.env.MAX_FILES_PER_BATCH || 200),

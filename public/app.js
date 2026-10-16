@@ -44,7 +44,7 @@ if (!cfg.accepting) {
 }
 
 function start(cfg) {
-  $('limits').textContent = `Up to ${humanSize(cfg.maxFileSize)} per file · ${cfg.maxFiles} files at a time`;
+  $('limits').textContent = `MAX ${humanSize(cfg.maxFileSize)} PER FILE · ${cfg.maxFiles} FILES PER SEND · NO LOGIN NEEDED`;
 
   const uppy = new Uppy({
     autoProceed: false,
@@ -55,7 +55,20 @@ function start(cfg) {
       inline: true,
       width: '100%',
       height: 420,
-      theme: 'auto',
+      theme: 'dark',
+      locale: {
+        strings: {
+          dropPasteBoth: 'Drop files here — or %{browseFiles} / %{browseFolders}',
+          dropPasteFiles: 'Drop files here — or %{browseFiles}',
+          browseFiles: 'browse files',
+          browseFolders: 'browse folders',
+          dropHint: 'Release to transmit',
+          uploadXFiles: { 0: 'Send %{smart_count} file', 1: 'Send %{smart_count} files' },
+          xFilesSelected: { 0: '%{smart_count} file queued', 1: '%{smart_count} files queued' },
+          uploading: 'Transmitting',
+          complete: 'Complete',
+        },
+      },
       proudlyDisplayPoweredByUppy: false,
       fileManagerSelectionType: 'both',
       showRemoveButtonAfterComplete: false,
@@ -109,7 +122,7 @@ function start(cfg) {
     await fetch(`/api/batches/${batchId}/complete`, { method: 'POST' }).catch(() => {});
     storage.set(BATCH_KEY, null);
     const n = result.successful.length;
-    $('done-text').textContent = `${n} file${n === 1 ? '' : 's'} arrived safely. Nothing else to do — you can close this page.`;
+    $('done-text').textContent = `${n} file${n === 1 ? '' : 's'} received intact. Nothing else to do. You can close this window.`;
     $('uploader').hidden = true;
     $('done').hidden = false;
   });

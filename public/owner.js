@@ -20,17 +20,17 @@ if (form) {
   form.addEventListener('submit', (ev) => {
     if (armed) {
       btn.disabled = true;
-      btn.textContent = 'Deleting…';
+      btn.textContent = 'Purging…';
       return;
     }
     ev.preventDefault();
     armed = true;
-    btn.textContent = 'Click again to delete';
+    btn.textContent = 'Confirm delete';
     btn.classList.add('armed');
     clearTimeout(timer);
     timer = setTimeout(() => {
       armed = false;
-      btn.textContent = 'Delete from server';
+      btn.textContent = 'Delete';
       btn.classList.remove('armed');
     }, 4000);
   });

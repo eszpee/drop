@@ -4,37 +4,38 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Send files</title>
+<meta name="theme-color" content="#000000">
+<title>DROP :: send files</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="/vendor/vt323-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/vendor/uppy.min.css">
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <main class="shell">
   <header class="hero">
-    <div class="mark" aria-hidden="true">↓</div>
-    <h1>Send files to <span id="owner">me</span></h1>
-    <p class="muted">Drop them below, or anywhere on this page. Large files are fine, and if your
-      connection drops the upload picks up where it left off.</p>
+    <p class="banner">PETERSZASZ.COM // DROP v1.0 // SECURE LINE</p>
+    <h1><span class="prompt">SEND FILES TO <span id="owner">ME</span></span><span class="cursor" aria-hidden="true"></span></h1>
+    <p>Drag files anywhere onto this screen, or browse for them below. Big files are fine.
+      If the connection drops, the transfer picks up where it stopped.</p>
   </header>
 
   <section id="uploader" class="uploader" aria-label="File upload"></section>
 
-  <section id="done" class="card center" hidden>
-    <div class="mark ok" aria-hidden="true">✓</div>
-    <h1>Sent</h1>
-    <p class="muted" id="done-text">Your files arrived. Nothing else to do.</p>
-    <button class="btn ghost" id="again" type="button">Send more files</button>
+  <section id="done" class="term center" data-label="STATUS" hidden>
+    <h1>Transmission complete</h1>
+    <p id="done-text">Your files arrived. Nothing else to do.</p>
+    <button class="btn" id="again" type="button">Send more</button>
   </section>
 
-  <section id="closed" class="card center" hidden>
-    <div class="mark" aria-hidden="true">⏸</div>
-    <h1>Not accepting files right now</h1>
-    <p class="muted">Please try again a bit later.</p>
+  <section id="closed" class="term center" data-label="STATUS" hidden>
+    <h1>Line closed</h1>
+    <p>Not accepting files right now. Try again a bit later.</p>
   </section>
 
-  <p class="foot muted small" id="limits"></p>
+  <p class="foot" id="limits"></p>
 </main>
+<script type="module" src="/rain.js"></script>
 <script type="module" src="/app.js"></script>
 </body>
 </html>
