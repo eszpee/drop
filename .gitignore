@@ -6,3 +6,9 @@ data
 .claude
 .deploy
 BUILD
+
+# The standalone example, once filled in.
+examples/standalone/.env
+examples/standalone/apprise/*
+!examples/standalone/apprise/apprise.yml.example
+!examples/standalone/.env.example

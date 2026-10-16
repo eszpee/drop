@@ -1,0 +1,68 @@
+# drop on its own: the app, a Cloudflare Tunnel to reach it, and an Apprise API
+# server for the emails. Nothing is published on the host; the tunnel is the only
+# way in. Copy .env.example to .env and apprise/apprise.yml.example to
+# apprise/apprise.yml, fill both in, then `docker compose up -d --build`.
+#
+# Not tested as a whole: a starting point, not a recipe. The repo's top-level
+# compose.yaml is the one in production, behind an existing reverse proxy.
+services:
+  drop:
+    build: ../..
+    image: drop:local
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ:-UTC}
+      - PUBLIC_URL=${PUBLIC_URL:?set PUBLIC_URL}
+      - APPRISE_URL=http://apprise:8000/notify/apprise
+      - APPRISE_TAG=email
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE:-10G}
+      - MAX_TOTAL=${MAX_TOTAL:-100G}
+      - MIN_FREE=${MIN_FREE:-20G}
+    volumes:
+      - drop-data:/data
+    depends_on:
+      drop-init:
+        condition: service_completed_successfully
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  # A fresh named volume is root-owned and empty. Hand it to the image's `node`
+  # user (uid 1000) and add the marker drop insists on before it writes anything.
+  drop-init:
+    image: busybox:1.37
+    command: sh -c 'chown 1000:1000 /data && touch /data/.drop-volume && chown 1000:1000 /data/.drop-volume'
+    volumes:
+      - drop-data:/data
+    restart: "no"
+
+  # In the Cloudflare dashboard, give the tunnel a public hostname (the host in
+  # PUBLIC_URL) with service http://drop:3000. Going through Cloudflare is not
+  # optional: home mode and the per-IP limits read CF-Connecting-IP.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN:?set TUNNEL_TOKEN}
+    depends_on:
+      - drop
+
+  # Stateful "simple" mode: apprise/apprise.yml is the config for the key
+  # `apprise`, which is the /notify/apprise in drop's APPRISE_URL.
+  apprise:
+    image: caronc/apprise:latest
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ:-UTC}
+      - APPRISE_STATEFUL_MODE=simple
+      - APPRISE_WORKER_COUNT=1
+    volumes:
+      - ./apprise:/config
+
+volumes:
+  drop-data:

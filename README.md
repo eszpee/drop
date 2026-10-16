@@ -111,9 +111,75 @@ DATA_DIR=./data PUBLIC_URL=http://localhost:3000 npm start
 npm test
 ```
 
-In Docker, see `compose.yaml`. It expects a reverse proxy on an existing network
-(`DROP_NETWORK`) and an absolute host path for the data (`DROP_DATA_DIR`). The proxy
-must allow request bodies of at least 50 MB, and should not buffer them.
+## Deploying
+
+drop must be reached **only through Cloudflare**. Home mode and the per-IP limits
+both read the `CF-Connecting-IP` header; exposed any other way, anyone could set it.
+Two ways to run it:
+
+### On its own: `examples/standalone/`
+
+drop, a [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)
+and an [Apprise API](https://github.com/caronc/apprise-api) server for the emails,
+with nothing published on the host. This is an untested starting point:
+
+```bash
+cd examples/standalone
+cp .env.example .env                                  # PUBLIC_URL, TUNNEL_TOKEN, limits
+cp apprise/apprise.yml.example apprise/apprise.yml    # where the emails go
+docker compose up -d --build
+```
+
+Outside the compose file, in the Cloudflare dashboard: give the tunnel a public
+hostname matching `PUBLIC_URL`, with service `http://drop:3000`. Data lives in the
+`drop-data` volume; a one-shot `drop-init` container hands it to uid 1000 and adds
+the `.drop-volume` marker.
+
+### Behind an existing reverse proxy: `compose.yaml`
+
+The top-level `compose.yaml` is the one in production. It joins the proxy's Docker
+network (`DROP_NETWORK`) and stores data at an absolute host path (`DROP_DATA_DIR`).
+The proxy must pass `CF-Connecting-IP` through, allow request bodies over 50 MB,
+and stream rather than buffer. For nginx:
+
+```nginx
+server {
+    listen 80;
+    server_name drop.example.com;
+
+    client_max_body_size 60M;              # tus sends 50 MB chunks
+
+    resolver 127.0.0.11 valid=10s ipv6=off;  # Docker DNS: follow a recreated container
+    set $drop http://drop:3000;
+
+    location / {
+        proxy_pass $drop;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header CF-Connecting-IP  $http_cf_connecting_ip;
+        proxy_http_version 1.1;
+        proxy_request_buffering off;       # uploads resume from the last byte that arrived
+        proxy_buffering off;               # big downloads and zips stream
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+    }
+}
+```
+
+### Optional: a Cloudflare rate limit
+
+The app limits sends and files per IP per hour. A Cloudflare rate-limiting rule
+stops bursts before they reach it: count only the requests that *create* something,
+not the chunk uploads or downloads. For example, 20 requests per 10 seconds per IP,
+blocking for 10 seconds:
+
+```
+(http.host eq "drop.example.com" and http.request.method eq "POST"
+ and http.request.uri.path in {"/files" "/files/" "/api/batches"})
+```
+
+Uppy treats the resulting 429 as a rate limit and backs off, so a big send slows
+down rather than fails.
 
 ## Storage layout
 

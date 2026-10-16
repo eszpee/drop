@@ -1,0 +1,5 @@
+# Where drop's emails go. Any Apprise URL works (https://github.com/caronc/apprise),
+# as long as it carries the tag `email`. A Gmail example, with an app password:
+urls:
+  - mailtos://you:app-password@gmail.com?to=you@example.com:
+      - tag: email
