@@ -12,6 +12,7 @@ import { BatchStore, UploadIndex } from './store.js';
 import { notifyBatch, notifyFull } from './notify.js';
 import { cleanFilename, contentDisposition, parseRange, uniqueNames, spaceVerdict, RateLimiter, humanSize } from './util.js';
 import { ownerPage, messagePage } from './pages.js';
+import { VERSION } from './build.js';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
@@ -218,9 +219,13 @@ const staticFiles = {
   '/vendor/uppy.min.css': ['node_modules/uppy/dist/uppy.min.css', 'text/css; charset=utf-8'],
 };
 
+// The upload page is static apart from the version in its banner, filled in here
+// once rather than by the browser, so nothing flickers on load.
+const indexHtml = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8').replaceAll('{{VERSION}}', VERSION);
+
 function serveStatic(res, pathname) {
   const [file, type] = staticFiles[pathname];
-  const body = fs.readFileSync(path.join(root, file));
+  const body = pathname === '/' ? indexHtml : fs.readFileSync(path.join(root, file));
   // Vendor files change only with a new image; pages and app code revalidate.
   const cache = pathname.startsWith('/vendor/') ? 'public, max-age=86400' : 'no-cache';
   res.writeHead(200, { ...securityHeaders, 'content-type': type, 'cache-control': cache });
@@ -318,7 +323,6 @@ async function route(req, res) {
       maxFileSize: config.maxFileSize,
       maxFiles: config.maxFilesPerBatch,
       accepting: await accepting(),
-      owner: config.ownerName,
     });
   }
 
@@ -390,7 +394,7 @@ server.requestTimeout = 0;
 server.headersTimeout = 60_000;
 server.listen(config.port, () => {
   console.log(
-    `drop listening on :${config.port} — data ${config.dataDir}, max file ${humanSize(config.maxFileSize)}, ` +
+    `drop ${VERSION} listening on :${config.port} — data ${config.dataDir}, max file ${humanSize(config.maxFileSize)}, ` +
       `quota ${humanSize(config.maxTotal)}, keep free ${humanSize(config.minFree)}`,
   );
 });

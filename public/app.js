@@ -34,8 +34,6 @@ const cfg = await fetch('/api/config')
   .then((r) => r.json())
   .catch(() => ({ accepting: false }));
 
-if (cfg.owner) $('owner').textContent = cfg.owner;
-
 if (!cfg.accepting) {
   $('uploader').hidden = true;
   $('closed').hidden = false;

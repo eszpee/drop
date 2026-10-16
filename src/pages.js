@@ -1,4 +1,5 @@
 import { escapeHtml as e, humanSize } from './util.js';
+import { VERSION } from './build.js';
 
 function layout(title, body, { script } = {}) {
   return `<!doctype html>
@@ -76,7 +77,7 @@ export function ownerPage(b) {
   return layout(
     'incoming',
     `<header class="hero">
-  <p class="banner">PETERSZASZ.COM // DROP // RECEIVED ${e(fmtDate(b.createdAt))}</p>
+  <p class="banner">PETERSZASZ.COM // DROP ${VERSION} // RECEIVED ${e(fmtDate(b.createdAt))}</p>
   <h1><span class="prompt">INCOMING: ${plural(b.files.length, 'FILE')}</span><span class="cursor" aria-hidden="true"></span></h1>
   <p class="muted">${humanSize(total)} total · from ${e(b.ip ?? 'unknown')}</p>
 </header>

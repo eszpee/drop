@@ -24,8 +24,6 @@ export const config = {
   markerFile: path.join(dataDir, '.drop-volume'),
   requireMarker: process.env.REQUIRE_MARKER !== '0',
   publicUrl: (process.env.PUBLIC_URL || '').replace(/\/+$/, ''),
-  // Who the upload page says it is for.
-  ownerName: process.env.OWNER_NAME || 'me',
   appriseUrl: process.env.APPRISE_URL || '',
   appriseTag: process.env.APPRISE_TAG || 'email',
   maxFileSize: bytes('MAX_FILE_SIZE', 50 * GB),

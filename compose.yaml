@@ -14,7 +14,6 @@ services:
     environment:
       - TZ=Europe/Budapest
       - PUBLIC_URL=${PUBLIC_URL:?set PUBLIC_URL}
-      - OWNER_NAME=${OWNER_NAME:-me}
       - APPRISE_URL=${APPRISE_URL:-}
       - APPRISE_TAG=${APPRISE_TAG:-email}
       - MAX_FILE_SIZE=${MAX_FILE_SIZE:-50G}
