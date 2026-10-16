@@ -92,13 +92,14 @@ a { color: var(--hi); }
 }
 .prompt::before { content: '> '; color: var(--fg); }
 .cursor {
+  /* Sized to the capitals, not the full em box, so it reads as a text cursor. */
   display: inline-block;
-  width: 0.55em;
-  height: 0.9em;
-  margin-left: 0.08em;
+  width: 0.38em;
+  height: 0.56em;
+  margin-left: 0.1em;
   background: var(--fg);
   box-shadow: var(--glow);
-  vertical-align: -0.05em;
+  vertical-align: baseline;
   animation: blink 1.06s steps(1) infinite;
 }
 @keyframes blink { 50% { opacity: 0; } }
