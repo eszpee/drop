@@ -1,0 +1,39 @@
+# Runs behind a reverse proxy on an existing Docker network. Everything
+# deployment-specific (data directory, network, URLs) comes from the environment
+# the stack is deployed with; nothing host-specific lives here.
+services:
+  drop:
+    build: .
+    image: drop:local
+    container_name: drop
+    restart: unless-stopped
+    # No published port: the reverse proxy reaches the app over a shared network,
+    # so nothing can bypass it (and spoof CF-Connecting-IP).
+    networks:
+      - frontend
+    environment:
+      - TZ=Europe/Budapest
+      - PUBLIC_URL=${PUBLIC_URL:?set PUBLIC_URL}
+      - OWNER_NAME=${OWNER_NAME:-me}
+      - APPRISE_URL=${APPRISE_URL:-}
+      - APPRISE_TAG=${APPRISE_TAG:-email}
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE:-10G}
+      - MAX_TOTAL=${MAX_TOTAL:-300G}
+      - MIN_FREE=${MIN_FREE:-300G}
+    volumes:
+      # Absolute host path, writable by uid 1000 (the image's `node` user), with a
+      # `.drop-volume` marker file at its root.
+      - ${DROP_DATA_DIR:?set DROP_DATA_DIR}:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+networks:
+  frontend:
+    # The reverse proxy's network; created by the proxy's own stack.
+    name: ${DROP_NETWORK:?set DROP_NETWORK}
+    external: true
