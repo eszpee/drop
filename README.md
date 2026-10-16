@@ -10,6 +10,29 @@ owner can get them back out.
   that send: download each file or all of them as a .zip, then delete them from the
   server.
 - The link is the only credential (a random 192-bit token). There is no login.
+- The owner can also make **share links**: download-only, no delete, no sender
+  details, expiring after 1, 7 or 30 days, revocable from the owner page.
+
+## Home mode
+
+A visitor coming from the server's own public address is taken to be the owner at
+home (or on a VPN that exits there). For them the banner reads `HOME MODE`, and when
+an upload finishes the page offers a share link right away, with Copy and the
+system share sheet, so sending something to someone needs no email round trip.
+Files uploaded in home mode are deleted once their share links run out (links
+revoked by hand don't count; with all of them revoked, the files stay).
+
+The server learns its public address by asking `HOME_LOOKUP_URL` (default
+`https://1.1.1.1/cdn-cgi/trace`, which answers with an `ip=` line) and compares it
+with Cloudflare's `CF-Connecting-IP`. There is no background polling: a matching
+visitor costs nothing, and a mismatch triggers a fresh lookup at most once per
+`HOME_RECHECK_SECONDS` (60), so a changed home address is picked up on its own.
+A failed lookup keeps the last known address; with none known, nobody is home.
+Set `HOME_LOOKUP_URL=` (empty) to turn home mode off.
+
+Anyone behind the same address gets home mode, so it grants as little as possible:
+a share link for a batch that was itself uploaded in home mode. It never lists or
+opens other sends.
 
 ## Guards
 
@@ -63,5 +86,5 @@ DATA_DIR/
   .drop-volume          marker; required
   uploads/<id>          file contents (tus FileStore)
   uploads/<id>.json     tus metadata: size, filename, batch
-  batches/<batch>.json  one per send: owner token, file list, notification state
+  batches/<batch>.json  one per send: owner token, file list, share links, notification state
 ```

@@ -5,6 +5,8 @@
 //   id     known to the uploader's browser (tus metadata carries it)
 //   token  known only to the owner (it is in the email link and nowhere else)
 // so the uploader can add files to their batch but never download or delete them.
+// Share links add a third kind: download-only tokens with an expiry, which the
+// owner hands to someone else (batch.shares).
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -15,6 +17,7 @@ export class BatchStore {
     this.dir = dir;
     this.byId = new Map();
     this.byToken = new Map();
+    this.shares = new Map();
   }
 
   load() {
@@ -23,8 +26,7 @@ export class BatchStore {
       if (!f.endsWith('.json')) continue;
       try {
         const b = JSON.parse(fs.readFileSync(path.join(this.dir, f), 'utf8'));
-        this.byId.set(b.id, b);
-        this.byToken.set(b.token, b);
+        this.index(b);
       } catch (err) {
         console.error(`skipping unreadable batch ${f}: ${err.message}`);
       }
@@ -40,6 +42,9 @@ export class BatchStore {
       createdAt: now,
       updatedAt: now,
       ip: meta.ip ?? null,
+      // Uploaded in home mode, i.e. by the owner: only these can be shared from the
+      // upload page, and their files go when their share links expire.
+      home: Boolean(meta.home),
       userAgent: meta.userAgent ?? null,
       files: [],
       completedAt: null,
@@ -48,6 +53,7 @@ export class BatchStore {
       lastNotifyAttempt: null,
       downloadedAt: null,
       deletedAt: null,
+      shares: [],
     };
     this.save(b);
     return b;
@@ -61,6 +67,11 @@ export class BatchStore {
     return this.byToken.get(token);
   }
 
+  // The batch and share behind a share token, or nothing.
+  byShareToken(token) {
+    return this.shares.get(token);
+  }
+
   all() {
     return [...this.byId.values()];
   }
@@ -71,9 +82,14 @@ export class BatchStore {
     return b;
   }
 
-  save(b) {
+  index(b) {
     this.byId.set(b.id, b);
     this.byToken.set(b.token, b);
+    for (const s of b.shares ?? []) this.shares.set(s.token, { batch: b, share: s });
+  }
+
+  save(b) {
+    this.index(b);
     const file = path.join(this.dir, `${b.id}.json`);
     const tmp = `${file}.${process.pid}.tmp`;
     fs.writeFileSync(tmp, JSON.stringify(b, null, 2));
@@ -83,8 +99,31 @@ export class BatchStore {
   remove(b) {
     this.byId.delete(b.id);
     this.byToken.delete(b.token);
+    for (const s of b.shares ?? []) this.shares.delete(s.token);
     fs.rmSync(path.join(this.dir, `${b.id}.json`), { force: true });
   }
+}
+
+export function newShare(days, now = Date.now()) {
+  return {
+    id: crypto.randomBytes(6).toString('hex'),
+    token: crypto.randomBytes(24).toString('base64url'),
+    createdAt: new Date(now).toISOString(),
+    expiresAt: new Date(now + days * 86_400_000).toISOString(),
+    revokedAt: null,
+    downloadedAt: null,
+  };
+}
+
+export const shareActive = (s, now = Date.now()) => !s.revokedAt && Date.parse(s.expiresAt) > now;
+
+// A home batch is shared to be fetched, not to be kept: once every link that was
+// not revoked by hand has run out, its files go. A batch whose links were all
+// revoked stays, for the owner to delete or share again.
+export function sharesExpired(b, now = Date.now()) {
+  if (!b.home || b.deletedAt) return false;
+  const live = (b.shares ?? []).filter((s) => !s.revokedAt);
+  return live.length > 0 && live.every((s) => Date.parse(s.expiresAt) <= now);
 }
 
 // Every upload tus knows about, finished or not, read from FileStore's sidecar

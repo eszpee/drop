@@ -11,10 +11,10 @@
 <link rel="stylesheet" href="/vendor/uppy.min.css">
 <link rel="stylesheet" href="/style.css">
 </head>
-<body>
+<body data-home="{{HOME}}">
 <main class="shell">
   <header class="hero">
-    <p class="banner">PETERSZASZ.COM // DROP {{VERSION}} // SECURE LINE</p>
+    <p class="banner">PETERSZASZ.COM // DROP {{VERSION}} // {{MODE}}</p>
     <h1><span class="prompt">SEND FILES TO ME</span><span class="cursor" aria-hidden="true"></span></h1>
     <p>Drag files anywhere onto this screen, or browse for them below. Big files are fine.
       If the connection drops, the transfer picks up where it stopped.</p>
@@ -26,6 +26,26 @@
     <h1>Transmission complete</h1>
     <p id="done-text">Your files arrived. Nothing else to do.</p>
     <button class="btn" id="again" type="button">Send more</button>
+  </section>
+
+  <section id="share" class="term" data-label="SHARE" hidden>
+    <p class="muted small">Make a download-only link for these files. They are deleted from the server when it expires.</p>
+    <div class="share-new" id="share-new">
+      <select id="share-days" aria-label="Link expires after">
+        <option value="1">1 DAY</option>
+        <option value="7" selected>7 DAYS</option>
+        <option value="30">30 DAYS</option>
+      </select>
+      <button class="btn primary" id="share-make" type="button">Create link</button>
+    </div>
+    <div id="share-out" hidden>
+      <input class="link" id="share-url" type="text" readonly aria-label="Share link">
+      <div class="share-actions">
+        <button class="btn primary" id="share-copy" type="button">Copy</button>
+        <button class="btn" id="share-send" type="button" hidden>Share</button>
+      </div>
+      <p class="muted small" id="share-exp"></p>
+    </div>
   </section>
 
   <section id="closed" class="term center" data-label="STATUS" hidden>

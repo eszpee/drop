@@ -5,6 +5,9 @@ const CHUNK = 50 * 1024 * 1024;
 const BATCH_KEY = 'drop.batchId';
 
 const $ = (id) => document.getElementById(id);
+// Set by the server: the visitor shares the server's public address, i.e. is the
+// owner at home. The server checks again before it makes any link.
+const HOME = document.body.dataset.home === '1';
 const storage = {
   get: (k) => {
     try {
@@ -120,14 +123,18 @@ function start(cfg) {
     await fetch(`/api/batches/${batchId}/complete`, { method: 'POST' }).catch(() => {});
     storage.set(BATCH_KEY, null);
     const n = result.successful.length;
-    $('done-text').textContent = `${n} file${n === 1 ? '' : 's'} received intact. Nothing else to do. You can close this window.`;
+    $('done-text').textContent = HOME
+      ? `${n} file${n === 1 ? '' : 's'} received intact.`
+      : `${n} file${n === 1 ? '' : 's'} received intact. Nothing else to do. You can close this window.`;
     $('uploader').hidden = true;
     $('done').hidden = false;
+    if (HOME) showShare(batchId);
   });
 
   $('again').addEventListener('click', () => {
     uppy.clear();
     $('done').hidden = true;
+    $('share').hidden = true;
     $('uploader').hidden = false;
   });
 
@@ -136,4 +143,69 @@ function start(cfg) {
     const busy = uppy.getFiles().some((f) => f.progress.uploadStarted && !f.progress.uploadComplete);
     if (busy) ev.preventDefault();
   });
+}
+
+// ---------------------------------------------------------------- home mode
+
+let shareBatch = null;
+
+function showShare(batchId) {
+  shareBatch = batchId;
+  $('share-new').hidden = false;
+  $('share-out').hidden = true;
+  $('share-make').disabled = false;
+  $('share-make').textContent = 'Create link';
+  $('share').hidden = false;
+}
+
+if (HOME) {
+  $('share-make').addEventListener('click', async () => {
+    const btn = $('share-make');
+    btn.disabled = true;
+    btn.textContent = 'Working…';
+    const res = await fetch(`/api/batches/${shareBatch}/share`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ days: Number($('share-days').value) }),
+    }).catch(() => null);
+    const out = res && (await res.json().catch(() => ({})));
+    if (!res?.ok || !out.url) {
+      btn.disabled = false;
+      btn.textContent = 'Create link';
+      $('share-exp').textContent = '';
+      alertLine(out?.error || 'Could not make a link. Try again.');
+      return;
+    }
+    $('share-url').value = out.url;
+    const when = new Date(out.expiresAt).toLocaleString('en-GB', {
+      day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+    }).toUpperCase();
+    $('share-exp').textContent = `Works until ${when}. Revoke it from the link in your email.`;
+    $('share-new').hidden = true;
+    $('share-out').hidden = false;
+    $('share-send').hidden = !navigator.share;
+    $('share-url').select();
+  });
+
+  $('share-copy').addEventListener('click', async () => {
+    const btn = $('share-copy');
+    try {
+      await navigator.clipboard.writeText($('share-url').value);
+      btn.textContent = 'Copied';
+    } catch {
+      $('share-url').select();
+      btn.textContent = 'Press Ctrl+C';
+    }
+    setTimeout(() => (btn.textContent = 'Copy'), 2000);
+  });
+
+  $('share-send').addEventListener('click', () => {
+    navigator.share({ title: 'Files for you', url: $('share-url').value }).catch(() => {});
+  });
+}
+
+function alertLine(text) {
+  $('share-exp').textContent = `ERROR: ${text}`;
+  $('share-out').hidden = true;
+  $('share-new').hidden = false;
 }

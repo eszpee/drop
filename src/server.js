@@ -8,16 +8,19 @@ import { FileStore } from '@tus/file-store';
 import { ZipArchive } from 'archiver';
 
 import { config } from './config.js';
-import { BatchStore, UploadIndex } from './store.js';
+import { BatchStore, UploadIndex, newShare, shareActive, sharesExpired } from './store.js';
+import { HomeDetector } from './home.js';
 import { notifyBatch, notifyFull } from './notify.js';
 import { cleanFilename, contentDisposition, parseRange, uniqueNames, spaceVerdict, RateLimiter, humanSize } from './util.js';
-import { ownerPage, messagePage } from './pages.js';
+import { ownerPage, sharePage, messagePage } from './pages.js';
 import { VERSION } from './build.js';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
 const batches = new BatchStore(config.batchesDir);
 const uploads = new UploadIndex(config.uploadsDir);
+
+const home = new HomeDetector({ lookupUrl: config.homeLookupUrl, recheckMs: config.homeRecheckMs });
 
 const batchLimiter = new RateLimiter(30, 3600_000);
 const uploadLimiter = new RateLimiter(500, 3600_000);
@@ -68,6 +71,13 @@ function serialized(fn) {
 function clientIp(headers) {
   const get = (h) => (typeof headers.get === 'function' ? headers.get(h) : headers[h]);
   return get('cf-connecting-ip') || (get('x-forwarded-for') || '').split(',')[0].trim() || 'unknown';
+}
+
+// Home mode compares Cloudflare's view of the visitor with Cloudflare's view of
+// this server, so it reads only Cloudflare's header. Anything that could set the
+// header itself is on the LAN behind nginx, and so already home.
+async function isHome(req) {
+  return home.isHome(req.headers['cf-connecting-ip']);
 }
 
 const tus = new TusServer({
@@ -171,6 +181,11 @@ async function sweep() {
       if (now - Date.parse(b.deletedAt) > 90 * 86_400_000) batches.remove(b);
       continue;
     }
+    if (sharesExpired(b, now)) {
+      console.log(`batch ${b.id}: share links expired`);
+      deleteBatch(b);
+      continue;
+    }
     if (b.files.length === 0 && uploads.inFlight(b.id).length === 0 && now - Date.parse(b.updatedAt) > 86_400_000) {
       batches.remove(b);
       continue;
@@ -207,7 +222,6 @@ const json = (res, status, obj) => send(res, status, JSON.stringify(obj), { 'con
 const html = (res, status, body) => send(res, status, body, { 'content-type': 'text/html; charset=utf-8' });
 
 const staticFiles = {
-  '/': ['public/index.html', 'text/html; charset=utf-8'],
   '/app.js': ['public/app.js', 'text/javascript; charset=utf-8'],
   '/style.css': ['public/style.css', 'text/css; charset=utf-8'],
   '/owner.js': ['public/owner.js', 'text/javascript; charset=utf-8'],
@@ -219,13 +233,23 @@ const staticFiles = {
   '/vendor/uppy.min.css': ['node_modules/uppy/dist/uppy.min.css', 'text/css; charset=utf-8'],
 };
 
-// The upload page is static apart from the version in its banner, filled in here
-// once rather than by the browser, so nothing flickers on load.
+// The upload page is static apart from its banner: the version, and whether the
+// visitor is home. Both are filled in here rather than by the browser, so nothing
+// flickers on load.
 const indexHtml = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8').replaceAll('{{VERSION}}', VERSION);
+
+async function serveIndex(req, res) {
+  const atHome = await isHome(req);
+  const body = indexHtml
+    .replace('{{HOME}}', atHome ? '1' : '0')
+    .replace('{{MODE}}', atHome ? '<span class="home-flag">HOME MODE</span>' : 'SECURE LINE');
+  // Differs per visitor, so nothing may keep a copy.
+  send(res, 200, body, { 'content-type': 'text/html; charset=utf-8' });
+}
 
 function serveStatic(res, pathname) {
   const [file, type] = staticFiles[pathname];
-  const body = pathname === '/' ? indexHtml : fs.readFileSync(path.join(root, file));
+  const body = fs.readFileSync(path.join(root, file));
   // Vendor files change only with a new image; pages and app code revalidate.
   const cache = pathname.startsWith('/vendor/') ? 'public, max-age=86400' : 'no-cache';
   res.writeHead(200, { ...securityHeaders, 'content-type': type, 'cache-control': cache });
@@ -298,6 +322,33 @@ async function readBody(req, limit = 4096) {
   return body;
 }
 
+// The expiry asked for, from a JSON or a form body; only the offered choices count.
+async function readDays(req) {
+  const body = await readBody(req).catch(() => '');
+  let days;
+  try {
+    days = String(req.headers['content-type'] ?? '').includes('json')
+      ? JSON.parse(body).days
+      : new URLSearchParams(body).get('days');
+  } catch {}
+  days = Number(days);
+  return config.shareDays.includes(days) ? days : null;
+}
+
+const shareLink = (s) => `${config.publicUrl}/s/${s.token}`;
+
+function addShare(b, days) {
+  const s = newShare(days);
+  batches.update(b, { shares: [...(b.shares ?? []), s] });
+  console.log(`batch ${b.id}: share ${s.id} created, expires ${s.expiresAt}`);
+  return s;
+}
+
+const redirect = (res, location) => {
+  res.writeHead(303, { ...securityHeaders, location });
+  res.end();
+};
+
 // ---------------------------------------------------------------- routing
 
 async function route(req, res) {
@@ -312,6 +363,7 @@ async function route(req, res) {
     return tus.handle(req, res);
   }
 
+  if (m === 'GET' && p === '/') return serveIndex(req, res);
   if (m === 'GET' && staticFiles[p]) return serveStatic(res, p);
 
   if (m === 'GET' && p === '/healthz') {
@@ -330,7 +382,11 @@ async function route(req, res) {
     const ip = clientIp(req.headers);
     if (!batchLimiter.allow(ip)) return json(res, 429, { error: 'Too many requests, try again later.' });
     if (!(await accepting())) return json(res, 503, { error: 'Not accepting uploads right now.' });
-    const b = batches.create({ ip, userAgent: String(req.headers['user-agent'] ?? '').slice(0, 300) });
+    const b = batches.create({
+      ip,
+      userAgent: String(req.headers['user-agent'] ?? '').slice(0, 300),
+      home: await isHome(req),
+    });
     return json(res, 201, { id: b.id });
   }
 
@@ -345,7 +401,45 @@ async function route(req, res) {
     return json(res, 200, { ok: true, files: b.files.length });
   }
 
-  r = /^\/b\/([A-Za-z0-9_-]{32})(?:\/(zip|delete|f\/([0-9a-f]{32})))?$/.exec(p);
+  // A share link for a batch the owner just uploaded from home. Both halves are
+  // needed: the batch was created in home mode, and the request comes from home.
+  r = /^\/api\/batches\/([0-9a-f-]{36})\/share$/.exec(p);
+  if (m === 'POST' && r) {
+    const b = batches.get(r[1]);
+    if (!b || b.deletedAt || !b.home || b.files.length === 0) return json(res, 404, { error: 'Unknown batch.' });
+    if (!(await isHome(req))) return json(res, 403, { error: 'Sharing works only from home.' });
+    if ((b.shares ?? []).length >= config.maxSharesPerBatch) return json(res, 429, { error: 'Too many links.' });
+    const days = await readDays(req);
+    if (!days) return json(res, 400, { error: `days must be one of ${config.shareDays.join(', ')}.` });
+    const s = addShare(b, days);
+    return json(res, 201, { url: shareLink(s), expiresAt: s.expiresAt });
+  }
+
+  // Share links: download only, until they expire or are revoked.
+  r = /^\/s\/([A-Za-z0-9_-]{32})(?:\/(zip|f\/([0-9a-f]{32})))?$/.exec(p);
+  if (r && (m === 'GET' || m === 'HEAD')) {
+    const found = batches.byShareToken(r[1]);
+    if (!found) return html(res, 404, messagePage('Not found', 'There is nothing at this address.'));
+    const { batch: b, share: s } = found;
+    if (b.deletedAt) return html(res, 410, messagePage('Gone', 'These files have been deleted.'));
+    if (!shareActive(s)) return html(res, 410, messagePage('Link expired', 'This link no longer works. Ask for a new one.'));
+    const mark = () => {
+      s.downloadedAt = new Date().toISOString();
+      batches.update(b, {});
+    };
+    if (!r[2]) return html(res, 200, sharePage(b, s));
+    if (r[2] === 'zip' && m === 'GET') {
+      mark();
+      return streamZip(res, b);
+    }
+    const file = r[3] && b.files.find((f) => f.id === r[3]);
+    if (file) {
+      if (m === 'GET' && !req.headers.range) mark();
+      return streamFile(req, res, file);
+    }
+  }
+
+  r = /^\/b\/([A-Za-z0-9_-]{32})(?:\/(zip|delete|share|share\/([0-9a-f]{12})\/revoke|f\/([0-9a-f]{32})))?$/.exec(p);
   if (r) {
     const b = batches.byOwnerToken(r[1]);
     if (!b) return html(res, 404, messagePage('Not found', 'There is nothing at this address.'));
@@ -355,14 +449,28 @@ async function route(req, res) {
     if (action === 'delete' && m === 'POST') {
       await readBody(req).catch(() => {});
       deleteBatch(b);
-      res.writeHead(303, { ...securityHeaders, location: `/b/${b.token}` });
-      return res.end();
+      return redirect(res, `/b/${b.token}`);
+    }
+    if (action === 'share' && m === 'POST') {
+      const days = await readDays(req);
+      if (days && b.files.length > 0 && (b.shares ?? []).length < config.maxSharesPerBatch) addShare(b, days);
+      return redirect(res, `/b/${b.token}#share`);
+    }
+    if (r[3] && m === 'POST') {
+      await readBody(req).catch(() => {});
+      const s = (b.shares ?? []).find((x) => x.id === r[3]);
+      if (s && !s.revokedAt) {
+        s.revokedAt = new Date().toISOString();
+        batches.update(b, {});
+        console.log(`batch ${b.id}: share ${s.id} revoked`);
+      }
+      return redirect(res, `/b/${b.token}#share`);
     }
     if (action === 'zip' && m === 'GET') {
       batches.update(b, { downloadedAt: new Date().toISOString() });
       return streamZip(res, b);
     }
-    const file = r[3] && b.files.find((f) => f.id === r[3]);
+    const file = r[4] && b.files.find((f) => f.id === r[4]);
     if (file && (m === 'GET' || m === 'HEAD')) {
       if (m === 'GET' && !req.headers.range) batches.update(b, { downloadedAt: new Date().toISOString() });
       return streamFile(req, res, file);
@@ -395,7 +503,8 @@ server.headersTimeout = 60_000;
 server.listen(config.port, () => {
   console.log(
     `drop ${VERSION} listening on :${config.port} — data ${config.dataDir}, max file ${humanSize(config.maxFileSize)}, ` +
-      `quota ${humanSize(config.maxTotal)}, keep free ${humanSize(config.minFree)}`,
+      `quota ${humanSize(config.maxTotal)}, keep free ${humanSize(config.minFree)}, ` +
+      `home mode ${home.enabled ? `via ${config.homeLookupUrl}` : 'off'}`,
   );
 });
 

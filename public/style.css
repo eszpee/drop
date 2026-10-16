@@ -198,6 +198,33 @@ a { color: var(--hi); }
   white-space: pre;
 }
 
+/* ---------------------------------------------------------------- sharing */
+
+.home-flag {
+  color: var(--bg);
+  background: var(--fg);
+  padding: 0 6px;
+  text-shadow: none;
+}
+.link, .term select {
+  font: inherit;
+  color: var(--hi);
+  background: var(--bg);
+  border: 2px solid var(--fg);
+  border-radius: 0;
+  padding: 2px 8px;
+}
+.link { display: block; width: 100%; margin: 10px 0; text-overflow: ellipsis; }
+.link:focus, .term select:focus { outline: 2px dashed var(--hi); outline-offset: 2px; }
+.share-new, .share-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 12px; }
+.share-actions { margin: 0 0 10px; }
+.shares { list-style: none; margin: 0; padding: 0; }
+.share { padding: 6px 0 12px; border-bottom: 1px dashed var(--dim); }
+.share .link { margin: 4px 0 6px; }
+.share form { display: inline; margin-left: 12px; }
+.share.dead .link { color: var(--dim); border-color: var(--dim); text-decoration: line-through; }
+#share { margin-top: 22px; }
+
 /* ---------------------------------------------------------------- Uppy, re-skinned
    Uppy ships a light/dark product UI; everything below forces it onto the
    terminal: black, green, square, monospace. */

@@ -38,4 +38,10 @@ export const config = {
   // Half-finished uploads nobody resumed are removed after this long.
   staleUploadMs: Number(process.env.STALE_UPLOAD_DAYS || 7) * 86_400_000,
   sweepIntervalMs: 5 * 60_000,
+  // Home mode: where the server asks for its own public address (empty turns home
+  // mode off), and how often a mismatching visitor may make it ask again.
+  homeLookupUrl: process.env.HOME_LOOKUP_URL ?? 'https://1.1.1.1/cdn-cgi/trace',
+  homeRecheckMs: Number(process.env.HOME_RECHECK_SECONDS || 60) * 1000,
+  shareDays: [1, 7, 30],
+  maxSharesPerBatch: 20,
 };
