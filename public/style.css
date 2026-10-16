@@ -251,6 +251,19 @@ a { color: var(--hi); }
 .share.dead .link { color: var(--dim); border-color: var(--dim); text-decoration: line-through; }
 section#share { margin-top: 22px; }
 
+/* ---------------------------------------------------------------- admin */
+
+.banner a, .hero a { color: inherit; }
+.banner a:hover, .hero a:hover { background: var(--fg); color: var(--bg); text-decoration: none; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px 20px; }
+.stat { display: flex; flex-direction: column; }
+.stat-value { font-size: 40px; line-height: 1; color: var(--hi); text-shadow: var(--glow); }
+.stat-label { color: var(--dim); font-size: 18px; }
+.meter { height: 14px; border: 2px solid var(--fg); margin-bottom: 10px; background: var(--faint); }
+.meter span { display: block; height: 100%; background: var(--fg); box-shadow: var(--glow); }
+.flag { color: var(--hi); font-weight: 400; text-transform: uppercase; }
+.dir { display: inline-block; min-width: 3.2em; color: var(--dim); }
+
 /* ---------------------------------------------------------------- Uppy, re-skinned
    Uppy ships a light/dark product UI; everything below forces it onto the
    terminal: black, green, square, monospace. */

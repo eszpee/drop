@@ -37,9 +37,12 @@ visitor costs nothing, and a mismatch triggers a fresh lookup at most once per
 A failed lookup keeps the last known address; with none known, nobody is home.
 Set `HOME_LOOKUP_URL=` (empty) to turn home mode off.
 
-Anyone behind the same address gets home mode, so it grants as little as possible:
-a share link for a batch that was itself uploaded in home mode. It never lists or
-opens other sends.
+Home mode also links to `/admin`: disk use against the quota, 90-day statistics
+(sends received and downloaded, sends shared and fetched by their recipients, links
+made and used), uploads in flight, the inbox (sends to you, with their owner pages),
+the outbox (your shares, their links and whether they were fetched), and the
+history of deleted sends with why they went. Anyone behind the home address can
+open it; from anywhere else `/admin` is a plain 404.
 
 ## Guards
 

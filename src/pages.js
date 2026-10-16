@@ -171,3 +171,144 @@ ${b.files.length > 0 ? shareSection(b) : ''}
     { script: '/owner.js' },
   );
 }
+
+// ---------------------------------------------------------------- admin
+
+const DAY = 86_400_000;
+const sizeOf = (b) => b.files.reduce((n, f) => n + f.size, 0);
+const firstName = (names, count) =>
+  names ? `${e(names)}${count > 1 ? ` <span class="muted">+${count - 1}</span>` : ''}` : '<span class="muted">(no name)</span>';
+
+function row({ title, meta, href, label }) {
+  return `<li class="file">
+    <div class="file-main">
+      <span class="file-name">${title}</span>
+      <span class="file-size">${meta}</span>
+    </div>
+    ${href ? `<a class="btn" href="${href}">${label}</a>` : ''}
+  </li>`;
+}
+
+function stat(value, label) {
+  return `<div class="stat"><span class="stat-value">${value}</span><span class="stat-label">${label}</span></div>`;
+}
+
+const reasons = { owner: 'deleted by you', expired: 'links expired', unshared: 'never shared' };
+
+export function adminPage({ batches, inFlight, space, now = Date.now() }) {
+  const live = batches.filter((b) => !b.deletedAt);
+  const gone = batches.filter((b) => b.deletedAt).sort((a, b) => b.deletedAt.localeCompare(a.deletedAt));
+  const newest = (a, b) => b.createdAt.localeCompare(a.createdAt);
+
+  const receiving = live.filter((b) => inFlight.has(b.id)).sort(newest);
+  const inbox = live.filter((b) => !b.home && b.files.length > 0).sort(newest);
+  const outbox = live.filter((b) => b.home && b.files.length > 0).sort(newest);
+
+  // History: tombstones are kept for 90 days, so everything here is that window.
+  const all = [...live.filter((b) => b.files.length > 0), ...gone];
+  const inAll = all.filter((b) => !b.home);
+  const outAll = all.filter((b) => b.home);
+  const bytesOf = (b) => (b.deletedAt ? b.deleted?.bytes ?? 0 : sizeOf(b));
+  const sum = (xs) => xs.reduce((n, b) => n + bytesOf(b), 0);
+  const links = outAll.flatMap((b) => b.shares ?? []);
+  const fetched = links.filter((x) => x.downloadedAt).length;
+  const outFetched = outAll.filter((b) => (b.shares ?? []).some((x) => x.downloadedAt)).length;
+  const liveLinks = live.flatMap((b) => b.shares ?? []).filter((x) => shareActive(x, now)).length;
+  const inRead = inAll.filter((b) => b.downloadedAt).length;
+
+  const pct = space.maxTotal ? Math.min(100, Math.round((space.stored / space.maxTotal) * 100)) : 0;
+
+  const inboxRows = inbox
+    .map((b) =>
+      row({
+        title: firstName(b.files[0]?.name, b.files.length),
+        meta: `${e(fmtDate(b.createdAt))} · ${humanSize(sizeOf(b))} · from ${e(b.ip ?? 'unknown')} · ${
+          b.downloadedAt ? 'downloaded' : '<b class="flag">new</b>'
+        }${b.completedAt ? '' : ' · <span class="flag">unfinished</span>'}`,
+        href: `/b/${b.token}`,
+        label: 'Open',
+      }),
+    )
+    .join('');
+
+  const outboxRows = outbox
+    .map((b) => {
+      const shares = b.shares ?? [];
+      const active = shares.filter((x) => shareActive(x, now));
+      const soonest = active.map((x) => x.expiresAt).sort()[0];
+      const got = shares.some((x) => x.downloadedAt);
+      const state = active.length
+        ? `${plural(active.length, 'LINK').toLowerCase()} · until ${e(fmtDate(soonest))}`
+        : shares.length
+          ? 'no live link'
+          : `<span class="flag">no link</span> · goes ${e(fmtDate(new Date(Date.parse(b.updatedAt) + DAY).toISOString()))}`;
+      return row({
+        title: firstName(b.files[0]?.name, b.files.length),
+        meta: `${e(fmtDate(b.createdAt))} · ${humanSize(sizeOf(b))} · ${state} · ${got ? 'fetched' : 'not fetched'}`,
+        href: `/b/${b.token}`,
+        label: 'Manage',
+      });
+    })
+    .join('');
+
+  const receivingRows = receiving
+    .map((b) => {
+      const t = inFlight.get(b.id);
+      const p = t.total ? Math.floor((t.received / t.total) * 100) : 0;
+      return row({
+        title: `${plural(t.files, 'FILE')} in flight${b.home ? ' (yours)' : ''}`,
+        meta: `${humanSize(t.received)} of ${humanSize(t.total)} · ${p}% · from ${e(b.ip ?? 'unknown')} · started ${e(fmtDate(b.createdAt))}`,
+      });
+    })
+    .join('');
+
+  const historyRows = gone
+    .slice(0, 30)
+    .map((b) => {
+      const d = b.deleted ?? { count: 0, bytes: 0 };
+      const got = b.home ? (b.shares ?? []).some((x) => x.downloadedAt) : Boolean(b.downloadedAt);
+      return row({
+        title: `<span class="dir">${b.home ? 'OUT' : 'IN'}</span> ${firstName(d.first, d.count)}`,
+        meta: `${e(fmtDate(b.createdAt))} · ${plural(d.count, 'FILE').toLowerCase()} · ${humanSize(d.bytes)} · ${
+          got ? 'downloaded' : 'never downloaded'
+        } · ${reasons[d.reason] ?? 'deleted'} ${e(fmtDate(b.deletedAt))}`,
+      });
+    })
+    .join('');
+
+  const section = (label, rows, empty) =>
+    `<section class="term" data-label="${label}"><ul class="files">${rows || `<li class="muted">${empty}</li>`}</ul></section>`;
+
+  return layout(
+    'admin',
+    `<header class="hero">
+  <p class="banner">DROP ${VERSION} // <span class="home-flag">HOME MODE</span> // ADMIN</p>
+  <h1><span class="prompt">CONTROL ROOM</span><span class="cursor" aria-hidden="true"></span></h1>
+  <p class="muted"><a href="/">&lt; back to upload</a></p>
+</header>
+
+<section class="term" data-label="DISK">
+  <div class="meter" role="img" aria-label="${pct}% of the quota used"><span style="width:${pct}%"></span></div>
+  <p class="small">${humanSize(space.stored)} stored of ${humanSize(space.maxTotal)} quota · ${
+    space.free == null ? 'free space unknown' : `${humanSize(space.free)} free on the volume, ${humanSize(space.minFree)} kept back`
+  }</p>
+</section>
+
+<section class="term" data-label="LAST 90 DAYS">
+  <div class="stats">
+    ${stat(inAll.length, `received · ${humanSize(sum(inAll))}`)}
+    ${stat(`${inRead}/${inAll.length}`, 'received, downloaded')}
+    ${stat(outAll.length, `sent · ${humanSize(sum(outAll))}`)}
+    ${stat(`${outFetched}/${outAll.length}`, 'sent, fetched by recipient')}
+    ${stat(links.length, `${links.length === 1 ? 'link' : 'links'} made · ${fetched} used`)}
+    ${stat(liveLinks, `${liveLinks === 1 ? 'link' : 'links'} live now`)}
+  </div>
+</section>
+
+${receiving.length ? section('IN FLIGHT', receivingRows, '') : ''}
+${section(`INBOX · ${inbox.length}`, inboxRows, 'Nothing waiting.')}
+${section(`OUTBOX · ${outbox.length}`, outboxRows, 'Nothing shared right now.')}
+${section('HISTORY', historyRows, 'Nothing deleted yet.')}
+<p class="foot">Deleted sends are remembered for 90 days.</p>`,
+  );
+}

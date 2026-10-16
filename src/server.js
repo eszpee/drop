@@ -12,7 +12,7 @@ import { BatchStore, UploadIndex, newShare, shareActive, sharesExpired } from '.
 import { HomeDetector } from './home.js';
 import { notifyBatch, notifyFull } from './notify.js';
 import { cleanFilename, contentDisposition, parseRange, uniqueNames, spaceVerdict, RateLimiter, humanSize } from './util.js';
-import { ownerPage, sharePage, messagePage } from './pages.js';
+import { ownerPage, sharePage, adminPage, messagePage } from './pages.js';
 import { VERSION } from './build.js';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
@@ -185,14 +185,14 @@ async function sweep() {
     }
     if (sharesExpired(b, now)) {
       console.log(`batch ${b.id}: share links expired`);
-      deleteBatch(b);
+      deleteBatch(b, 'expired');
       continue;
     }
     // A home upload exists to be shared, and sends no email; one nobody made a link
     // for within a day would otherwise sit on the disk with nobody knowing.
     if (b.home && !(b.shares ?? []).length && !uploads.inFlight(b.id).length && now - Date.parse(b.updatedAt) > 86_400_000) {
       console.log(`batch ${b.id}: home upload never shared`);
-      deleteBatch(b);
+      deleteBatch(b, 'unshared');
       continue;
     }
     if (b.files.length === 0 && uploads.inFlight(b.id).length === 0 && now - Date.parse(b.updatedAt) > 86_400_000) {
@@ -251,7 +251,7 @@ async function serveIndex(req, res) {
   const atHome = await isHome(req);
   const body = indexHtml
     .replace('{{HOME}}', atHome ? '1' : '0')
-    .replace('{{MODE}}', atHome ? '<span class="home-flag">HOME MODE</span>' : 'SECURE LINE');
+    .replace('{{MODE}}', atHome ? '<span class="home-flag">HOME MODE</span> // <a href="/admin">ADMIN</a>' : 'SECURE LINE');
   // Differs per visitor, so nothing may keep a copy.
   send(res, 200, body, { 'content-type': 'text/html; charset=utf-8' });
 }
@@ -316,10 +316,18 @@ function streamZip(res, batch) {
   zip.finalize();
 }
 
-function deleteBatch(batch) {
+// reason: 'owner' (the delete button), 'expired' (share links ran out) or
+// 'unshared' (a home upload nobody made a link for). The tombstone keeps enough
+// for the admin page's history.
+function deleteBatch(batch, reason) {
   for (const f of batch.files) uploads.remove(f.id);
   for (const id of uploads.inFlight(batch.id)) uploads.remove(id);
-  const summary = { count: batch.files.length, bytes: batch.files.reduce((n, f) => n + f.size, 0) };
+  const summary = {
+    count: batch.files.length,
+    bytes: batch.files.reduce((n, f) => n + f.size, 0),
+    first: batch.files[0]?.name ?? null,
+    reason,
+  };
   batches.update(batch, { deletedAt: new Date().toISOString(), files: [], deleted: summary });
   console.log(`batch ${batch.id}: deleted ${summary.count} files`);
 }
@@ -376,6 +384,31 @@ async function route(req, res) {
 
   if (m === 'GET' && p === '/') return serveIndex(req, res);
   if (m === 'GET' && staticFiles[p]) return serveStatic(res, p);
+
+  // Everything on one page, for the owner at home. Anyone else gets the same
+  // answer as for any unknown address.
+  if (m === 'GET' && p === '/admin') {
+    if (!(await isHome(req))) return html(res, 404, messagePage('Not found', 'There is nothing at this address.'));
+    const inFlight = new Map();
+    for (const [id, u] of uploads.map) {
+      if (u.done || !u.batchId) continue;
+      const t = inFlight.get(u.batchId) ?? { received: 0, total: 0, files: 0 };
+      t.received += Math.min(u.size, uploads.bytesOnDisk(id));
+      t.total += u.size;
+      t.files += 1;
+      inFlight.set(u.batchId, t);
+    }
+    const free = await freeBytes().catch(() => null);
+    return html(
+      res,
+      200,
+      adminPage({
+        batches: batches.all(),
+        inFlight,
+        space: { stored: uploads.committed(), maxTotal: config.maxTotal, free, minFree: config.minFree },
+      }),
+    );
+  }
 
   if (m === 'GET' && p === '/healthz') {
     return (await volumeReady()) ? send(res, 200, 'ok\n') : send(res, 503, 'volume not ready\n');
@@ -461,7 +494,7 @@ async function route(req, res) {
     if (b.deletedAt) return html(res, 410, messagePage('Deleted', 'These files have already been deleted.'));
     if (action === 'delete' && m === 'POST') {
       await readBody(req).catch(() => {});
-      deleteBatch(b);
+      deleteBatch(b, 'owner');
       return redirect(res, `/b/${b.token}`);
     }
     if (action === 'share' && m === 'POST') {
