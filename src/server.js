@@ -20,6 +20,7 @@ import {
   RateLimiter,
   humanSize,
   geoFromHeaders,
+  uploadName,
 } from './util.js';
 import { ownerPage, sharePage, adminPage, messagePage } from './pages.js';
 import { VERSION } from './build.js';
@@ -121,7 +122,7 @@ const tus = new TusServer({
       }
       uploads.add(upload.id, upload.size, batch.id);
       batches.update(batch, {});
-      return { metadata: { ...upload.metadata, filename: cleanFilename(upload.metadata?.filename) } };
+      return { metadata: { ...upload.metadata, filename: uploadName(upload.metadata) } };
     });
   },
 
@@ -137,7 +138,7 @@ const tus = new TusServer({
         id: upload.id,
         name: cleanFilename(upload.metadata?.filename),
         size: upload.size,
-        type: upload.metadata?.filetype || null,
+        type: upload.metadata?.filetype || upload.metadata?.type || null,
         finishedAt: new Date().toISOString(),
       });
     }

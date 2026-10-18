@@ -29,6 +29,12 @@ export function cleanFilename(raw) {
   return name;
 }
 
+// Uppy sends the name as both `filename` and `name`; other tus clients (a curl
+// script, tus-js-client by hand) often only set `name`.
+export function uploadName(metadata) {
+  return cleanFilename(metadata?.filename || metadata?.name);
+}
+
 export function contentDisposition(filename) {
   const ascii = filename.replace(/[^\x20-\x7e]/g, '_').replace(/["\\]/g, '_');
   return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`;

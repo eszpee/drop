@@ -11,6 +11,7 @@ import {
   geoFromHeaders,
   placeName,
   senderLabel,
+  uploadName,
 } from '../src/util.js';
 
 test('cleanFilename strips paths and control characters', () => {
@@ -96,4 +97,12 @@ test('placeName and senderLabel', () => {
   assert.equal(senderLabel({ ip: '1.2.3.4', geo: { city: null, region: null, country: 'DE' } }), '1.2.3.4 (Germany)');
   assert.equal(senderLabel({ ip: '1.2.3.4' }), '1.2.3.4');
   assert.equal(senderLabel({}), 'unknown');
+});
+
+test('uploadName falls back to the name field', () => {
+  assert.equal(uploadName({ filename: 'a.mkv', name: 'b.mkv' }), 'a.mkv');
+  assert.equal(uploadName({ name: 'Amateur (1994).mkv' }), 'Amateur (1994).mkv');
+  assert.equal(uploadName({ name: '../x/y.srt' }), 'y.srt');
+  assert.equal(uploadName({}), 'file');
+  assert.equal(uploadName(undefined), 'file');
 });
