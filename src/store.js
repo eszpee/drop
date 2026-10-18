@@ -42,6 +42,8 @@ export class BatchStore {
       createdAt: now,
       updatedAt: now,
       ip: meta.ip ?? null,
+      // {city, region, country} from Cloudflare's headers, or null.
+      geo: meta.geo ?? null,
       // Uploaded in home mode, i.e. by the owner: only these can be shared from the
       // upload page, and their files go when their share links expire.
       home: Boolean(meta.home),

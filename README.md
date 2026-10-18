@@ -102,6 +102,16 @@ A send is announced when the uploader's page reports it finished. If the page ne
 does (the tab was closed), it is announced after 30 quiet minutes
 (`IDLE_NOTIFY_MINUTES`). If more files arrive later, another email follows.
 
+## Sender location
+
+Next to the sender's address, the owner page, the admin page and the email show
+where it is, for example `86.59.163.158 (Budapest, Hungary)`. The location comes
+from Cloudflare's headers on the request that starts the send, and is stored with
+it. Nothing is looked up afterwards, and no address goes to a third party.
+`CF-IPCountry` is on by default. For city and region, turn on the managed transform
+**Add visitor location headers** (Rules → Settings in the zone). Without it only
+the country shows. Sends from before this feature show the address alone.
+
 ## Running
 
 ```bash

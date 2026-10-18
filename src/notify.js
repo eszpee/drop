@@ -2,7 +2,7 @@
 // holds no SMTP credentials. Without APPRISE_URL it only logs.
 
 import { config } from './config.js';
-import { escapeHtml, humanSize } from './util.js';
+import { escapeHtml, humanSize, senderLabel } from './util.js';
 
 async function send(title, html) {
   if (!config.appriseUrl) {
@@ -32,7 +32,7 @@ export async function notifyBatch(batch, { link, partial }) {
 <p><b>${what}</b> dropped${partial ? ' — the sender left before marking it done, so it may be incomplete' : ''}.</p>
 <p><a href="${escapeHtml(link)}">${escapeHtml(link)}</a></p>
 <ul>${rows}</ul>
-<p style="color:#888">From ${escapeHtml(batch.ip ?? 'unknown')} · ${escapeHtml(batch.userAgent ?? '')}</p>`;
+<p style="color:#888">From ${escapeHtml(senderLabel(batch))} · ${escapeHtml(batch.userAgent ?? '')}</p>`;
   return send(title, html);
 }
 

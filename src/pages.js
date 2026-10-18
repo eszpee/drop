@@ -1,4 +1,4 @@
-import { escapeHtml as e, humanSize } from './util.js';
+import { escapeHtml as e, humanSize, senderLabel } from './util.js';
 import { VERSION } from './build.js';
 import { config } from './config.js';
 import { shareActive } from './store.js';
@@ -150,7 +150,7 @@ export function ownerPage(b) {
     `<header class="hero">
   <p class="banner">DROP ${VERSION} // RECEIVED ${e(fmtDate(b.createdAt))}</p>
   <h1><span class="prompt">INCOMING: ${plural(b.files.length, 'FILE')}</span><span class="cursor" aria-hidden="true"></span></h1>
-  <p class="muted">${humanSize(total)} total · from ${e(b.ip ?? 'unknown')}${b.home ? ' (home)' : ''}</p>
+  <p class="muted">${humanSize(total)} total · from ${e(senderLabel(b))}${b.home ? ' (home)' : ''}</p>
 </header>
 
 <section class="term" data-label="PAYLOAD">
@@ -222,7 +222,7 @@ export function adminPage({ batches, inFlight, space, now = Date.now() }) {
     .map((b) =>
       row({
         title: firstName(b.files[0]?.name, b.files.length),
-        meta: `${e(fmtDate(b.createdAt))} · ${humanSize(sizeOf(b))} · from ${e(b.ip ?? 'unknown')} · ${
+        meta: `${e(fmtDate(b.createdAt))} · ${humanSize(sizeOf(b))} · from ${e(senderLabel(b))} · ${
           b.downloadedAt ? 'downloaded' : '<b class="flag">new</b>'
         }${b.completedAt ? '' : ' · <span class="flag">unfinished</span>'}`,
         href: `/b/${b.token}`,
@@ -257,7 +257,7 @@ export function adminPage({ batches, inFlight, space, now = Date.now() }) {
       const p = t.total ? Math.floor((t.received / t.total) * 100) : 0;
       return row({
         title: `${plural(t.files, 'FILE')} in flight${b.home ? ' (yours)' : ''}`,
-        meta: `${humanSize(t.received)} of ${humanSize(t.total)} · ${p}% · from ${e(b.ip ?? 'unknown')} · started ${e(fmtDate(b.createdAt))}`,
+        meta: `${humanSize(t.received)} of ${humanSize(t.total)} · ${p}% · from ${e(senderLabel(b))} · started ${e(fmtDate(b.createdAt))}`,
       });
     })
     .join('');

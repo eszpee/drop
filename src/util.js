@@ -81,6 +81,53 @@ export function spaceVerdict({ size, free, committed, pending }, limits) {
   return { ok: true };
 }
 
+// Where an address is, as Cloudflare saw it: country from CF-IPCountry, city and
+// region only when the zone adds visitor location headers. Read once when a send
+// is created and stored with it, so nothing is looked up later and no visitor
+// address leaves for a third party.
+export function geoFromHeaders(headers) {
+  const get = (h) => {
+    const v = headers[h];
+    if (typeof v !== 'string' || !v.trim()) return null;
+    // Node reads header bytes as latin1; Cloudflare sends UTF-8 (São Paulo).
+    const utf8 = Buffer.from(v, 'latin1').toString('utf8');
+    return (utf8.includes('\uFFFD') ? v : utf8).trim().slice(0, 100);
+  };
+  const country = get('cf-ipcountry')?.toUpperCase() ?? null;
+  const geo = {
+    city: get('cf-ipcity'),
+    region: get('cf-region'),
+    country: country && /^[A-Z][A-Z0-9]$/.test(country) && country !== 'XX' ? country : null,
+  };
+  return geo.city || geo.region || geo.country ? geo : null;
+}
+
+const countryNames = new Intl.DisplayNames(['en'], { type: 'region', fallback: 'code' });
+
+export function countryName(code) {
+  if (code === 'T1') return 'Tor';
+  try {
+    return countryNames.of(code);
+  } catch {
+    return code;
+  }
+}
+
+// "Budapest, Hungary"; null when nothing is known. A region named like its city
+// (Budapest, Budapest) is said once.
+export function placeName(geo) {
+  if (!geo) return null;
+  const parts = [geo.city, geo.region !== geo.city ? geo.region : null, geo.country ? countryName(geo.country) : null];
+  return parts.filter(Boolean).join(', ') || null;
+}
+
+// The sender line: "86.59.163.158 (Budapest, Hungary)". Sends from before geo was
+// recorded show the address alone.
+export function senderLabel(b) {
+  const place = placeName(b.geo);
+  return `${b.ip ?? 'unknown'}${place ? ` (${place})` : ''}`;
+}
+
 export function escapeHtml(s) {
   return String(s).replace(
     /[&<>"']/g,

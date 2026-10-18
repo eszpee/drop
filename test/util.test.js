@@ -8,6 +8,9 @@ import {
   spaceVerdict,
   humanSize,
   RateLimiter,
+  geoFromHeaders,
+  placeName,
+  senderLabel,
 } from '../src/util.js';
 
 test('cleanFilename strips paths and control characters', () => {
@@ -68,4 +71,29 @@ test('RateLimiter', () => {
   assert.ok(!rl.allow('ip', 2));
   assert.ok(rl.allow('other', 2));
   assert.ok(rl.allow('ip', 1000));
+});
+
+test('geoFromHeaders reads Cloudflare location headers', () => {
+  assert.deepEqual(geoFromHeaders({ 'cf-ipcountry': 'HU' }), { city: null, region: null, country: 'HU' });
+  assert.deepEqual(geoFromHeaders({ 'cf-ipcountry': 'hu', 'cf-ipcity': 'Budapest', 'cf-region': 'Budapest' }), {
+    city: 'Budapest',
+    region: 'Budapest',
+    country: 'HU',
+  });
+  assert.equal(geoFromHeaders({}), null);
+  assert.equal(geoFromHeaders({ 'cf-ipcountry': 'XX' }), null);
+  assert.equal(geoFromHeaders({ 'cf-ipcountry': '<script>' }), null);
+  // UTF-8 bytes as Node hands them over (latin1-decoded).
+  const raw = Buffer.from('São Paulo', 'utf8').toString('latin1');
+  assert.equal(geoFromHeaders({ 'cf-ipcity': raw }).city, 'São Paulo');
+});
+
+test('placeName and senderLabel', () => {
+  assert.equal(placeName({ city: 'Budapest', region: 'Budapest', country: 'HU' }), 'Budapest, Hungary');
+  assert.equal(placeName({ city: 'Graz', region: 'Styria', country: 'AT' }), 'Graz, Styria, Austria');
+  assert.equal(placeName({ city: null, region: null, country: 'T1' }), 'Tor');
+  assert.equal(placeName(null), null);
+  assert.equal(senderLabel({ ip: '1.2.3.4', geo: { city: null, region: null, country: 'DE' } }), '1.2.3.4 (Germany)');
+  assert.equal(senderLabel({ ip: '1.2.3.4' }), '1.2.3.4');
+  assert.equal(senderLabel({}), 'unknown');
 });

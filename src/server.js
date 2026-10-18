@@ -11,7 +11,16 @@ import { config } from './config.js';
 import { BatchStore, UploadIndex, newShare, shareActive, sharesExpired } from './store.js';
 import { HomeDetector } from './home.js';
 import { notifyBatch, notifyFull } from './notify.js';
-import { cleanFilename, contentDisposition, parseRange, uniqueNames, spaceVerdict, RateLimiter, humanSize } from './util.js';
+import {
+  cleanFilename,
+  contentDisposition,
+  parseRange,
+  uniqueNames,
+  spaceVerdict,
+  RateLimiter,
+  humanSize,
+  geoFromHeaders,
+} from './util.js';
 import { ownerPage, sharePage, adminPage, messagePage } from './pages.js';
 import { VERSION } from './build.js';
 
@@ -428,6 +437,7 @@ async function route(req, res) {
     if (!(await accepting())) return json(res, 503, { error: 'Not accepting uploads right now.' });
     const b = batches.create({
       ip,
+      geo: geoFromHeaders(req.headers),
       userAgent: String(req.headers['user-agent'] ?? '').slice(0, 300),
       home: await isHome(req),
     });
