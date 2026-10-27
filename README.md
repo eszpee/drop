@@ -86,10 +86,13 @@ refused for space, the owner is emailed (at most twice a day).
 
 `DATA_DIR` must contain a `.drop-volume` marker file. If the volume is not mounted,
 the marker is missing, so the app refuses uploads and `/healthz` returns 503,
-rather than filling the disk underneath the mount point.
+rather than filling the disk underneath the mount point. `REQUIRE_MARKER=0` turns
+the check off.
 
-Also: 30 new sends and 500 new files per hour per client IP (`CF-Connecting-IP`),
-at most 200 files per send. Partial uploads that are not resumed within 7 days are
+Also: 30 new sends and 500 new files per hour per client IP (`CF-Connecting-IP`,
+or the first `X-Forwarded-For` address when that header is missing), at most 200
+files per send (`MAX_FILES_PER_BATCH`), and at most 20 share links per send.
+Partial uploads that are not resumed within 7 days (`STALE_UPLOAD_DAYS`) are
 removed.
 
 ## Notifications
@@ -112,12 +115,45 @@ it. Nothing is looked up afterwards, and no address goes to a third party.
 **Add visitor location headers** (Rules → Settings in the zone). Without it only
 the country shows. Sends from before this feature show the address alone.
 
+## Configuration
+
+All settings are environment variables.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `PUBLIC_URL` | none | Base URL for links in emails; without it they are relative |
+| `DATA_DIR` | `/data` | Where uploads and batches live |
+| `PORT` | `3000` | Port the server listens on |
+| `TZ` | `UTC` in the image | Time zone for the dates on the pages and in the logs |
+| `APPRISE_URL` | none | Apprise API endpoint; without it, notifications are only logged |
+| `APPRISE_TAG` | `email` | Apprise tag that selects the target |
+| `MAX_FILE_SIZE` | `50G` | See Guards |
+| `MAX_TOTAL` | `500G` | See Guards |
+| `MIN_FREE` | `300G` | See Guards |
+| `MAX_FILES_PER_BATCH` | `200` | Most files in one send |
+| `IDLE_NOTIFY_MINUTES` | `30` | Quiet minutes before an unfinished send is announced |
+| `STALE_UPLOAD_DAYS` | `7` | Days before an unresumed partial upload is removed |
+| `HOME_LOOKUP_URL` | `https://1.1.1.1/cdn-cgi/trace` | Where home mode looks up the public address; empty turns home mode off |
+| `HOME_RECHECK_SECONDS` | `60` | Shortest wait between lookups after a mismatch |
+| `REQUIRE_MARKER` | on | The `.drop-volume` marker is required unless this is `0` |
+
+The compose files pass only some of these to the container. `compose.yaml` passes
+`TZ`, `PUBLIC_URL`, `APPRISE_URL`, `APPRISE_TAG`, `MAX_FILE_SIZE`, `MAX_TOTAL` and
+`MIN_FREE`. The standalone example passes the same, with `APPRISE_URL` and
+`APPRISE_TAG` fixed. To set any other variable, add it under the service's
+`environment:`.
+
 ## Running
 
 ```bash
 npm ci
 mkdir -p data && touch data/.drop-volume
 DATA_DIR=./data PUBLIC_URL=http://localhost:3000 npm start
+```
+
+Tests:
+
+```bash
 npm test
 ```
 
@@ -198,7 +234,8 @@ DATA_DIR/
   .drop-volume          marker; required
   uploads/<id>          file contents (tus FileStore)
   uploads/<id>.json     tus metadata: size, filename, batch
-  batches/<batch>.json  one per send: owner token, file list, share links, notification state
+  batches/<batch>.json  one per send: owner token, file list, share links, notification state;
+                        deleted sends stay 90 days for the admin history
 ```
 
 ## License
