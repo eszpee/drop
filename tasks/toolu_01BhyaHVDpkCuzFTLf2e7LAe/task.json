@@ -1,0 +1,15 @@
+{
+  "tool_use_id": "toolu_01BhyaHVDpkCuzFTLf2e7LAe",
+  "agent_id": "ac5acee257332755c",
+  "subagent_type": "general-purpose",
+  "task_description": "Fix final-review findings",
+  "token_usage": {
+    "input_tokens": 8,
+    "cache_creation_tokens": 21473,
+    "cache_read_tokens": 131630,
+    "output_tokens": 1266,
+    "api_call_count": 4
+  },
+  "started_at": "2026-10-27T11:28:53.091984+01:00",
+  "completed_at": "2026-10-27T11:29:10.825574+01:00"
+}
