@@ -121,10 +121,10 @@ All settings are environment variables.
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `PUBLIC_URL` | none | Base URL for links in emails; without it they are relative |
+| `PUBLIC_URL` | none | Base URL for the links in emails and for share links; without it they are relative |
 | `DATA_DIR` | `/data` | Where uploads and batches live |
 | `PORT` | `3000` | Port the server listens on |
-| `TZ` | `UTC` in the image | Time zone for the dates on the pages and in the logs |
+| `TZ` | unset (UTC in the image, the host's zone otherwise) | Time zone for the dates on the pages |
 | `APPRISE_URL` | none | Apprise API endpoint; without it, notifications are only logged |
 | `APPRISE_TAG` | `email` | Apprise tag that selects the target |
 | `MAX_FILE_SIZE` | `50G` | See Guards |
@@ -140,7 +140,8 @@ All settings are environment variables.
 The compose files pass only some of these to the container. `compose.yaml` passes
 `TZ`, `PUBLIC_URL`, `APPRISE_URL`, `APPRISE_TAG`, `MAX_FILE_SIZE`, `MAX_TOTAL` and
 `MIN_FREE`. The standalone example passes the same, with `APPRISE_URL` and
-`APPRISE_TAG` fixed. To set any other variable, add it under the service's
+`APPRISE_TAG` fixed. `compose.yaml` fixes `TZ` to `Europe/Budapest` instead of reading it
+from the environment; the standalone example reads `${TZ:-UTC}`. To set any other variable, add it under the service's
 `environment:`.
 
 ## Running
