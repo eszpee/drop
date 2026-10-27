@@ -140,9 +140,9 @@ All settings are environment variables.
 The compose files pass only some of these to the container. `compose.yaml` passes
 `TZ`, `PUBLIC_URL`, `APPRISE_URL`, `APPRISE_TAG`, `MAX_FILE_SIZE`, `MAX_TOTAL` and
 `MIN_FREE`. The standalone example passes the same, with `APPRISE_URL` and
-`APPRISE_TAG` fixed. `compose.yaml` fixes `TZ` to `Europe/Budapest` instead of reading it
-from the environment; the standalone example reads `${TZ:-UTC}`. To set any other variable, add it under the service's
-`environment:`.
+`APPRISE_TAG` fixed. `compose.yaml` fixes `TZ` to `Europe/Budapest` instead of
+reading it from the environment; the standalone example reads `${TZ:-UTC}`. To set
+any other variable, add it under the service's `environment:`.
 
 ## Running
 
