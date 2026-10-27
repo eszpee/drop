@@ -1,0 +1,82 @@
+Base directory for this skill: /Users/eszpee/.claude/plugins/cache/pixiepowers/pixiepowers/0.128.0/skills/using-pixiepowers
+
+## State Machine
+
+```
+INTAKE → BRANCH → PROPOSE → APPLY → REVIEW → PR
+```
+
+One word — **state**; the machine has no phases or steps; every state has the same shape.
+
+**Iron Law: NO STATE TRANSITION WITHOUT THE CURRENT STATE'S EXIT CRITERIA MET.**
+
+Every carrier response and `state_read(ticketId)` carries `entry` — the ticket's current state, its `exits` (each naming a `tool`, optional static `args`, the landing state, and `requires` skills to invoke), `requiresBeforeWrite`, `commitAllowed`, `recipePath`, and this state's own data (`planPath` at PROPOSE, default mode; `reviewRange`/`rubricPaths` at REVIEW). A response's `entry` is the authority for the next action; the body never restates any exit. The MCP server enforces this — `state_update` rejects an unnamed transition, `commit` rejects when `commitAllowed` is false, and `pr_create` rejects outside `REVIEW`/`PR`. REVIEW: the closure check, then self-reviewer, blind reviewer and verifier, then fix rounds (default mode); lite drafts the PR.
+
+Recipes live one per state under `skills/using-pixiepowers/references/`.
+
+**On session start:**
+1. `session_init({sessionId})` → `{project: {projectId, stateDir, stateFile, remoteUrl, owner, repo, username, defaultBranch}, state: {tickets: {...}}}`. The `tickets` map is a **lean summary** — `{state, mode, title, branch, prUrl}` per ticket, not the full records (no `prBody`, `plan`, `description`, `acceptanceCriteria`); read a named ticket's full record (including `entry`) with `state_read(ticketId)`. Pass `sessionId` — the SessionStart hook surfaces the current session id in `<PIXIEPOWERS_CONTEXT>` ("Current session id: …"); passing it makes state writes stamp it onto tickets for later `claude --resume`.
+2. The SessionStart hook runs the auto-cleanup sweep itself (Node, inline, no model in the loop) and injects its result as a single line — nothing to dispatch.
+
+**Existing state is INERT.** Do NOT resume, continue, or propose work on an in-progress ticket just because state exists — no "you have N tickets in flight, shall we continue?" Act on a ticket only when the user names one, then read just that ticket's state.
+
+**Recovery:** on recovery after `/compact`, `claude --resume`, or a discarded response, call the no-`ticketId` read, match your git branch against each ticket's `branch`, call `state_read(ticketId)` for the match (`invalid` → see Triggers); on zero or several matches ask the human, never guess.
+
+## Contextual Triggers
+
+| Context | Required Action |
+|---------|----------------|
+| User references a ticket (GitHub issue `#N`/`GH-N`, Jira key, ClickUp task) or describes ad-hoc work with no ticket | Read `references/intake.md` and follow it. |
+| User asks about status | Call `dashboard_format`, display result |
+| User wants to clean up | Call `cleanup_preflight`, pipe its `questions` to AskUserQuestion. On Cancel, stop. Otherwise: remove-only → `state_remove`; has a branch → `cleanup_execute`. A PR-state error from either asks for force-delete, retry with `force: true`. |
+| User names or asks to continue a specific ticket | Read state for ONLY that ticket. Differing `sessionId` → point at `claude --resume <sessionId>`. `entry` alone does not move the session there — before acting, switch to its checkout: `EnterWorktree` for a tracked worktree, otherwise check out its branch. In `BRANCH` state, follow its `entry.exits` instead. |
+| A tool reports the ticket invalid (`state_read` `invalid` or `is invalid (` error) | Stop. AskUserQuestion with stored state, reason, branch. Options: `state_update` to APPLY (`rewind: true`) or REVIEW, or `state_remove`. Never pick yourself. |
+
+## Execution Hygiene
+
+- Independent read-only or verification shell commands go in one message as parallel `Bash` calls, one command each — never `&&`/`;`-joined, and never mixing a command the allowlist may prompt for with ones it will not.
+- First `Read` of any source/test file is windowed (offset/limit around the grep hit, ~150–250 lines); whole-file only for files under ~300 lines.
+
+## Invocation Discipline
+
+The router's "Read `references/<file>.md`" entries and each recipe's "Use `<skill>`" lines are not advisory. They mean: invoke `Skill('<skill>')` via the Skill tool at the named transition. Loading the skill's text into your context is a hard prerequisite. If the skill is already loaded for this state entry, you can proceed; otherwise stop and invoke before doing anything else.
+
+The MCP server signals required invocations via `entry.exits[].requires` (skills needed before that exit) and `entry.requiresBeforeWrite` (needed before any non-test Write/Edit in this state) in state-carrier responses — treat them as preconditions for the next action.
+
+A strict PreToolUse hook blocks specific transitions when the prerequisite skill wasn't invoked since the current state was entered.
+
+If a hook denial fires, the fix is always: invoke the named skill, then retry the blocked tool call. Do not work around the hook.
+
+## Red Flags — Common Rationalizations
+
+| Thought | Reality |
+|---------|---------|
+| "This is a simple fix, I can skip intake" | Lite mode exists for trivial fixes. Use it. Intake still happens. |
+| "My instructions say not to use the Agent tool unless the user asked" | They asked — they handed you the work, ticket or ad-hoc, and REVIEW's subagents *are* part of it. The answer is in `references/review.md`. Dispatch them. |
+| "I should ask which mode to use" | Mode is automatic. Announce it; the user can say 'lite' or 'default' to switch. Asking is a regression. |
+| "I already know this skill, I don't need to load it" | Loading the skill's text into context is a hard prerequisite, whichever state you're in — not something familiarity exempts you from. |
+
+Some recipe files carry rationalizations specific to their own state — Read the recipe, not just this table.
+
+## Enforcement
+
+### Forbidden Actions
+
+A hook denies raw git and `gh` commands that have an MCP tool, and `superpowers:finishing-a-development-branch`; the denial names the tool to use.
+
+- No Bash `grep`/`ls`/`find`/`cat`/`head`/`tail`/`stat` for exploration — use `Grep`, `Glob`, `Read`, `Explore`.
+- No `cleanup_execute`/`cleanup_preflight` without an explicit user request — the session-start sweep already handles merged/queued tickets.
+
+## Conventions
+
+**Commit format:** `<type>(<scope>): <description> [<ticket-ref>]`
+
+**PR title format:** `<type>(<scope>): <description> [<ticket-ref>]` — `<scope>` optional (drop parens when no module/area stands out); `<description>` imperative, lowercase, no period. Omit `[<ticket-ref>]` for `adhoc`-source tickets. Hand-drafted; `pr_create` takes it as a plain string, no format enforcement.
+
+**Branch format:** `<username>/<ticket-id>-<short-description>` — generated by `branch_setup`.
+
+**PR body format:** the section order, the "when relevant" tiers, the exclude list, and the write-markdown-raw rule live in **`references/pr-body.md`** — Read it when drafting the PR body (in REVIEW). Brevity over completeness: the GitHub UI already shows files and commits — don't duplicate them.
+
+## MCP Preflight Pattern
+
+Every question has 2–4 `options`, each an object `{label, description}`; after any `AskUserQuestion` error, or a question that came back unanswered, restate it in plain text before re-issuing.
