@@ -1,0 +1,15 @@
+{
+  "tool_use_id": "toolu_01HZYanMgpaLHKvwaZLqAWZu",
+  "agent_id": "a22d2d7012fa7ec5d",
+  "subagent_type": "general-purpose",
+  "task_description": "Scoped re-review of final fixes",
+  "token_usage": {
+    "input_tokens": 12,
+    "cache_creation_tokens": 24062,
+    "cache_read_tokens": 218220,
+    "output_tokens": 1506,
+    "api_call_count": 6
+  },
+  "started_at": "2026-10-27T11:29:28.33027+01:00",
+  "completed_at": "2026-10-27T11:29:52.775443+01:00"
+}
