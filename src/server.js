@@ -543,7 +543,7 @@ fs.mkdirSync(config.uploadsDir, { recursive: true });
 batches.load();
 uploads.load();
 
-if (!config.publicUrl) console.warn('PUBLIC_URL is not set; emailed links will be relative.');
+if (!config.publicUrl) console.warn('PUBLIC_URL is not set; emailed and share links will be relative.');
 if (!config.appriseUrl) console.warn('APPRISE_URL is not set; notifications are only logged.');
 
 const server = http.createServer((req, res) => {

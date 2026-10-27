@@ -26,10 +26,10 @@ ${script ? `<script type="module" src="${script}?v=${VERSION}"></script>` : ''}
 </html>`;
 }
 
-const fmtDate = (iso) =>
+// No timeZone option: dates follow the TZ env var the container runs with.
+export const fmtDate = (iso) =>
   new Date(iso)
     .toLocaleString('en-GB', {
-      timeZone: 'Europe/Budapest',
       year: 'numeric',
       month: 'short',
       day: '2-digit',
