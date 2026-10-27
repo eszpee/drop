@@ -124,7 +124,7 @@ All settings are environment variables.
 | `PUBLIC_URL` | none | Base URL for the links in emails and for share links; without it they are relative |
 | `DATA_DIR` | `/data` | Where uploads and batches live |
 | `PORT` | `3000` | Port the server listens on |
-| `TZ` | unset (UTC in the image, the host's zone otherwise) | Time zone for the dates on the pages |
+| `TZ` | unset (UTC in the image, the host's zone otherwise) | Time zone for the dates on the pages the server renders |
 | `APPRISE_URL` | none | Apprise API endpoint; without it, notifications are only logged |
 | `APPRISE_TAG` | `email` | Apprise tag that selects the target |
 | `MAX_FILE_SIZE` | `50G` | See Guards |
