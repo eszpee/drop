@@ -1,0 +1,15 @@
+{
+  "tool_use_id": "toolu_01H1ahWyiHpSqvhs13g93Etc",
+  "agent_id": "acb75a789a3e552b0",
+  "subagent_type": "general-purpose",
+  "task_description": "REVIEW self-reviewer",
+  "token_usage": {
+    "input_tokens": 18,
+    "cache_creation_tokens": 38455,
+    "cache_read_tokens": 390689,
+    "output_tokens": 5109,
+    "api_call_count": 9
+  },
+  "started_at": "2026-10-27T11:30:39.336462+01:00",
+  "completed_at": "2026-10-27T11:31:40.970333+01:00"
+}

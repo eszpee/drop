@@ -1,0 +1,15 @@
+{
+  "tool_use_id": "toolu_01EHYfxqPZxaenb3y2vFAt6o",
+  "agent_id": "ae789c0350bbf6186",
+  "subagent_type": "general-purpose",
+  "task_description": "REVIEW blind reviewer",
+  "token_usage": {
+    "input_tokens": 18,
+    "cache_creation_tokens": 42072,
+    "cache_read_tokens": 416180,
+    "output_tokens": 5380,
+    "api_call_count": 9
+  },
+  "started_at": "2026-10-27T11:30:39.344493+01:00",
+  "completed_at": "2026-10-27T11:31:45.038818+01:00"
+}
